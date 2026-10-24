@@ -167,7 +167,8 @@ const ROAD_CLS = {
   unclassified: 1, residential: 1, living_street: 1, service: 1, pedestrian: 1,
 };
 const water = [], roads = [], streets = [], rail = [], parks = [], reserves = [], woods = [], admin = [];
-const roadSegs = [];   // 待合并的道路线段（同一街道被 OSM 切成很多短 way）
+const roadSegs = [];   // 待合并的干道线段（2/3/4 级，同一街道被 OSM 切成很多短 way）
+const streetSegs = []; // 待合并的支路线段（1 级，写入 streets）
 const railSegs = [];   // 待合并的铁路线段
 const waysPts = { water: 0, roads: 0, streets: 0, rail: 0, green: 0, admin: 0 };
 
@@ -309,9 +310,11 @@ for (const w of ways.values()) {
   }
   if (ROAD_CLS[t.highway] != null) {
     const cls = ROAD_CLS[t.highway];
-    // service（停车场通道、后巷、内部道路）不进汽车路网，但保留为街道用于建筑避让
+    // 游戏约定：roads 只放 2/3/4 级道路（render.js 的 lay 只有这三个键，放进 1 级会崩溃），
+    // 1 级支路（residential 等）写进 streets，只画在已开发街区；service（停车场通道、后巷）不写入。
     const isService = t.highway === 'service';
-    const isStreet = isService || cls <= 2;
+    if (isService) continue;
+    const toStreet = cls === 1;
     let flags = 0;
     if (t.bridge && t.bridge !== 'no') flags |= 1;
     if ((t.tunnel && t.tunnel !== 'no') || t.covered === 'yes') flags |= 2;
@@ -320,7 +323,7 @@ for (const w of ways.values()) {
       const pts = rdp(r, TOL_LINE);
       if (pts.length < 4) continue;
       // 先收集线段，循环结束后按（名称|等级|结构）合并成长折线，减少 way 数量与文件体积
-      roadSegs.push({ key: (t.name || '') + '|' + cls + '|' + flags + '|' + (isStreet ? 1 : 0), meta: { name: t.name, cls, flags, street: isStreet, service: isService }, pts: pts });
+      (toStreet ? streetSegs : roadSegs).push({ key: (t.name || '') + '|' + cls + '|' + flags, meta: { name: t.name, cls, flags }, pts: pts });
       waysPts.roads += pts.length / 2;
     }
     continue;
@@ -417,21 +420,26 @@ if (COAST) {
   }
 }
 
-// ---- 合并道路与铁路线段，写入 roads / rail ----
-// streets（建筑避让用的街道中心线）在伦敦这类 OSM 数据上会与 roads 重复近一倍体积；
-// roads 本身已参与建筑避让（city.js applyRoads 对所有已建道路描边），因此这里输出空 streets。
+// ---- 合并道路、支路与铁路线段，写入 roads / streets / rail ----
 let mergedCount = 0;
 for (const m of mergeSegments(roadSegs)) {
   mergedCount++;
   const meta = m.meta;
-  if (!meta.service) roads.push([ni(meta.name), meta.cls, meta.flags, enc(m.pts)]);
+  roads.push([ni(meta.name), meta.cls, meta.flags, enc(m.pts)]);
+}
+// 1 级支路进 streets（单条字符串，'!' 分隔）：只在已开发街区绘制，并参与建筑避让
+let mergedStreets = 0;
+for (const m of mergeSegments(streetSegs)) {
+  const sp = rdp(m.pts, TOL_STREET);
+  if (sp.length < 4) continue;
+  streets.push(enc(sp)); mergedStreets++;
 }
 let mergedRail = 0;
 for (const m of mergeSegments(railSegs)) {
   mergedRail++;
   rail.push([ni(m.meta.name), m.meta.flags, enc(m.pts), m.meta.hs ? 2003 : 0]);
 }
-if (process.argv.includes('--debug')) console.log(`  道路线段 ${roadSegs.length} → ${mergedCount} 条；铁路线段 ${railSegs.length} → ${mergedRail} 条`);
+if (process.argv.includes('--debug')) console.log(`  干道线段 ${roadSegs.length} → ${mergedCount} 条；支路线段 ${streetSegs.length} → ${mergedStreets} 段；铁路线段 ${railSegs.length} → ${mergedRail} 条`);
 
 // ---- relation（多面要素与行政边界）----
 for (const rel of rels.values()) {
