@@ -56,9 +56,12 @@ const CATEGORIES = {
     node["station"="subway"];
     node["public_transport"="station"]["subway"="yes"];
   );`,
+  coast: `(
+    way["natural"="coastline"];
+  );`,
 };
 
-const AA = ['water', 'green', 'roads', 'rail', 'admin', 'places'];
+const AA = ['water', 'green', 'roads', 'rail', 'admin', 'places', 'coast'];
 
 function usage() {
   console.error('用法：node scripts/fetch-osm.mjs --name <地图id> --west <lon> --south <lat> --east <lon> --north <lat> [--tiles 2] [--only water,roads]');
@@ -93,7 +96,7 @@ function query(body, bb) {
   return `[out:json][timeout:300][bbox:${bb.s.toFixed(5)},${bb.w.toFixed(5)},${bb.n.toFixed(5)},${bb.e.toFixed(5)}];` + body + '\n out geom;';
 }
 
-async function fetchQuery(q, label) {
+async function fetchQuery(q, label, allowEmpty) {
   let lastErr = null;
   for (let attempt = 0; attempt < 8; attempt++) {
     const url = MIRRORS[attempt % MIRRORS.length];
@@ -107,11 +110,13 @@ async function fetchQuery(q, label) {
       if (!res.ok) { lastErr = new Error(`${url.split('/')[2]} HTTP ${res.status} ${text.slice(0, 120).replace(/\s+/g, ' ')}`); }
       else {
         const parsed = JSON.parse(text);
-        // 空结果与异常时间戳都算失败：镜像数据库异常时会返回 0 要素而不报错
+        // 空结果与异常时间戳都算失败：镜像数据库异常时会返回 0 要素而不报错。
+        // 内陆城市的 coast 类别本来就应为空，允许 0 要素。
         const stamp = String((parsed.osm3s || {}).timestamp_osm_base || '');
-        if (!parsed.elements || !parsed.elements.length) lastErr = new Error(`${url.split('/')[2]} 返回 0 要素（镜像数据可能不完整）`);
+        const empty = !parsed.elements || !parsed.elements.length;
+        if (empty && !allowEmpty) lastErr = new Error(`${url.split('/')[2]} 返回 0 要素（镜像数据可能不完整）`);
         else if (!/^20\d\d-/.test(stamp)) lastErr = new Error(`${url.split('/')[2]} 数据时间戳异常：${stamp}`);
-        else return { elements: parsed.elements, server: url.split('/')[2], bytes: text.length, stamp };
+        else return { elements: parsed.elements || [], server: url.split('/')[2], bytes: text.length, stamp };
       }
     } catch (e) { lastErr = e; }
     const wait = Math.min(90000, 6000 * Math.pow(1.7, attempt));
@@ -133,7 +138,7 @@ for (let tz = 0; tz < tiles; tz++) {
       if (exists) { console.log(`跳过 ${cat}-${tile}（已存在）`); continue; }
       const label = `${cat}-${tile}`;
       const t0 = Date.now();
-      const r = await fetchQuery(query(CATEGORIES[cat], bb), label);
+      const r = await fetchQuery(query(CATEGORIES[cat], bb), label, cat === 'coast');
       await writeFile(file, JSON.stringify(r));
       // 记录来源与时间，供地图说明引用（服务器、查询范围、获取时间）
       const metaFile = path.join(outDir, '_meta.json');

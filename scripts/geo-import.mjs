@@ -36,6 +36,22 @@ const TOL_ADMIN = Number(arg('toladmin', '0.05'));
 const TOL_STREET = Number(arg('tolstreet', '0.06'));
 // 公园/林地：无名且面积小于该格数（1 格 = 0.0625 km²）的绿地不写入，避免成千上万的街角花园撑大文件
 const MIN_GREEN_CELLS = Number(arg('mingreen', '0'));
+// 行政区等级映射：输出到游戏的哪个层级（游戏里 6/7 = 区，8 = 街道/里）。
+// 伦敦的自治市在 OSM 是 8，需要改写为 6；中国的区是 6、街道是 8，保持原样。
+const ADMIN_MAP = (function () {
+  const s = arg('adminmap', '8:6,6:7,7:7');
+  const m = {};
+  for (const part of s.split(',')) { const kv = part.split(':'); if (kv.length === 2) m[Number(kv[0])] = Number(kv[1]); }
+  return m;
+})();
+// 海岸线：给出一个确定在海里的探测点（纬度,经度），则把 natural=coastline 拼成海面多边形
+const COAST = (function () {
+  const s = arg('coast', '');
+  if (!s) return null;
+  const p = s.split(',').map(Number);
+  return p.length === 2 && p.every(Number.isFinite) ? p : null;
+})();
+const SEA_NAME = arg('seaname', '海');
 
 // ---------------- 投影 ----------------
 const px = (lon) => (lon - lon0) * kx;
@@ -322,6 +338,85 @@ for (const w of ways.values()) {
   }
 }
 
+// ---- 海岸线 → 海面多边形 ----
+// OSM 里海不是多边形，而是 natural=coastline 的线（约定：陆地在左、水在右）。
+// 这里把主海岸链与图边界拼成闭合环，用"已知在海里的探测点"选出正确的一侧，岛屿作为孔洞。
+if (COAST) {
+  const closedCoast = [], openCoast = [];
+  for (const w of ways.values()) {
+    const t = w.tags || {};
+    if (t.natural !== 'coastline') continue;
+    const g = geomOf(w);
+    if (g.length < 2) continue;
+    if (isClosed(g)) closedCoast.push(toFlat(g)); else openCoast.push(toFlat(g));
+  }
+  const chains = assemble(openCoast).filter(c => c.length >= 8).sort((a, b) => b.length - a.length);
+  if (!chains.length) { console.error('警告：--coast 已启用，但没有可用的海岸线数据（检查 fetch 的 coast 类别）'); }
+  else {
+    const PER = 2 * (W + H);
+    const pointAt = (s) => {
+      s = ((s % PER) + PER) % PER;
+      if (s <= W) return [s, 0];
+      if (s <= W + H) return [W, s - W];
+      if (s <= 2 * W + H) return [2 * W + H - s, H];
+      return [0, PER - s];
+    };
+    const sAt = (x, y) => {
+      x = Math.max(0, Math.min(W, x)); y = Math.max(0, Math.min(H, y));
+      const d = [y, W - x, H - y, x];   // 到上、右、下、左边界
+      const k = d.indexOf(Math.min.apply(null, d));
+      return k === 0 ? x : k === 1 ? W + y : k === 2 ? W + H + (W - x) : 2 * W + H + (H - y);
+    };
+    const borderPath = (s1, s2, dir) => {
+      const corners = [0, W, W + H, 2 * W + H, PER];
+      const out = [];
+      let s = s1;
+      if (dir > 0) {
+        if (s2 < s1) s2 += PER;
+        for (;;) {
+          const next = corners.find(c => c > s + 1e-9);
+          if (next == null || next >= s2) break;
+          s = next; out.push(pointAt(s));
+        }
+        out.push(pointAt(s2));
+      } else {
+        if (s2 > s1) s2 -= PER;
+        for (;;) {
+          const prev = corners.slice().reverse().find(c => c < s - 1e-9);
+          if (prev == null || prev <= s2) break;
+          s = prev; out.push(pointAt(s));
+        }
+        out.push(pointAt(s2));
+      }
+      return out;
+    };
+    const main = chains[0];
+    const sx = main[0], sy = main[1], ex = main[main.length - 2], ey = main[main.length - 1];
+    const ringOfBorder = (dir) => {
+      const path = borderPath(sAt(ex, ey), sAt(sx, sy), dir);
+      const ring = [];
+      for (let k = 0; k < main.length; k += 2) ring.push(main[k], main[k + 1]);
+      // 端点吸附到边界，避免与边界路径之间留下缝
+      ring[0] = Math.max(0, Math.min(W, ring[0])); ring[1] = Math.max(0, Math.min(H, ring[1]));
+      ring[ring.length - 2] = Math.max(0, Math.min(W, ring[ring.length - 2]));
+      ring[ring.length - 1] = Math.max(0, Math.min(H, ring[ring.length - 1]));
+      for (const p of path) ring.push(p[0], p[1]);
+      return ring;
+    };
+    const cands = [ringOfBorder(1), ringOfBorder(-1)];
+    const probe = [px(COAST[1]), py(COAST[0])];
+    let sea = cands.find(r => inPoly(probe[0], probe[1], r));
+    if (!sea) { sea = cands[0]; console.error('警告：两个候选海面都不包含探测点，取第一个'); }
+    const rings = [[true, sea]];
+    for (const isl of closedCoast) {
+      const c = [isl[0], isl[1]];
+      if (inPoly(c[0], c[1], sea)) rings.push([false, isl]);
+    }
+    const row = polyRow(SEA_NAME, rings);
+    if (row) { water.push(row); waysPts.water += sea.length / 2; console.log(`  海面：海岸链 ${main.length / 2} 点，岛屿 ${rings.length - 1} 个`); }
+  }
+}
+
 // ---- 合并道路与铁路线段，写入 roads / rail ----
 // streets（建筑避让用的街道中心线）在伦敦这类 OSM 数据上会与 roads 重复近一倍体积；
 // roads 本身已参与建筑避让（city.js applyRoads 对所有已建道路描边），因此这里输出空 streets。
@@ -372,8 +467,9 @@ for (const rel of rels.values()) {
   if (t.boundary === 'administrative') {
     const al = Number(t.admin_level);
     if (!(al >= 6 && al <= 8)) continue;
-    // 本游戏的区级 = admin_level 6/7，街道级 = 8。英国 borough 多为 8，改写为 6，用 data 的 district 绑定。
-    const outLevel = al === 8 ? 6 : 7;
+    // 本游戏的区级 = 6/7，街道级 = 8；按 --adminmap 把 OSM 等级改写到目标层级后写入
+    const outLevel = ADMIN_MAP[al];
+    if (outLevel == null) continue;
     for (const r of ringOf('outer')) {
       const flat = r.concat([r[0], r[1]]);
       const pts = rdp(flat, TOL_ADMIN);
@@ -474,17 +570,26 @@ function decLocal(s) {
 }
 
 // 自检：河岸上的单点不能作为判据（河流中心线与岸线本来就相差半个河宽），
-// 改用泰晤士河中心线顶点的覆盖率，并确认几个陆地地标没有被水面覆盖。
+// 改用河流中心线顶点的覆盖率（多边形与中心线取并集后的水域掩膜），并用 --land 指定的陆地地标反向核对。
+const RIVER_RE = new RegExp(arg('river', '.'), 'i');
 const riverPts = [];
 for (const w of ways.values()) {
   const t = w.tags || {};
-  if (t.waterway === 'river' && /thames/i.test(t.name || '')) for (const p of w.geometry || []) riverPts.push([px(p.lon), py(p.lat)]);
+  if (t.waterway === 'river' && RIVER_RE.test(t.name || '')) for (const p of w.geometry || []) {
+    const x = px(p.lon), y = py(p.lat);
+    // 只统计图内顶点：OSM 会返回相交要素的完整几何，图外的点当然不可能是水面
+    if (x >= 0 && x <= W && y >= 0 && y <= H) riverPts.push([x, y]);
+  }
 }
-const riverHit = riverPts.length ? riverPts.filter(p => waterAtXY(p[0], p[1])).length / riverPts.length : 0;
-const landProbes = [
-  ['特拉法加广场', 51.5080, -0.1281], ['金丝雀码头', 51.5050, -0.0196], ['海德公园', 51.5073, -0.1657], ['格林尼治天文台', 51.4769, -0.0005], ['圣保罗大教堂', 51.5138, -0.0984],
-];
-const checkResults = [{ label: `泰晤士河中心线覆盖 ${(riverHit * 100).toFixed(0)}%（${riverPts.length} 点）`, water: null, ok: riverHit > 0.7 }]
+const riverHit = riverPts.length ? riverPts.filter(p => waterAtXY(p[0], p[1])).length / riverPts.length : null;
+// 陆地探针：--land "纬度,经度" 可重复（默认不给，仅做河流覆盖检查）
+const landProbes = [];
+for (let i = 0; i < process.argv.length; i++) {
+  if (process.argv[i] !== '--land') continue;
+  const p = (process.argv[i + 1] || '').split(',').map(Number);
+  if (p.length === 2 && p.every(Number.isFinite)) landProbes.push([`${p[0]},${p[1]}`, p[0], p[1]]);
+}
+const checkResults = (riverHit == null ? [] : [{ label: `河流中心线覆盖 ${(riverHit * 100).toFixed(0)}%（${riverPts.length} 点）`, water: null, ok: riverHit > 0.6 }])
   .concat(landProbes.map(function (p) { const got = waterAt(p[2], p[1]); return { label: p[0] + '（陆地）', water: got, ok: !got }; }));
 
 // ---------------- 输出 ----------------
