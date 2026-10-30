@@ -152,6 +152,56 @@
     places: (G.places || []).map(function (p) { return [p[0], p[1], p[2], p[3]]; }),
   };
 
+  // 阶段目标的锚点：用地标 / 设施的既有坐标，避免手填经纬度与投影不一致（名称写错时载入即报错）
+  const site = function (name, r) {
+    const L = data.landmarks || [], F = data.facilities || [];
+    const byName = L.find(function (l) { return l.name === name; });
+    if (byName && typeof byName.x === 'number') return { name: name, x: byName.x, y: byName.y, r: r };
+    const f = F.find(function (x) { return x.n === name; });
+    if (f) {
+      const l2 = f.lm && L.find(function (l) { return l.id === f.lm; });
+      if (l2 && typeof l2.x === 'number') return { name: name, x: l2.x, y: l2.y, r: r };
+      if (f.at) return { name: name, x: f.at[0], y: f.at[1], r: r };
+    }
+    throw new Error('青岛：阶段目标锚点未找到 ' + name);
+  };
+
+  // 历史发展阶段（v2.2，eras.js）：summary 中「史实」可查证，「估算」为模型设定的发展倾向；grow 只改变人口与岗位增长的去向
+  // （总量仍按人口曲线），relocate 为每月疏解比例，corridors 为片区间通勤与购物去向倍数，demand 为出行强度与距离倍数，
+  // goals 为阶段目标（本城任务，奖励单位：万元）
+  data.eras = [
+    { id: 'qd-e1', from: 2000, name: '老城与港口', tag: '史实',
+      summary: '史实：2000 年的青岛没有地铁，市南西部（栈桥、中山路）是传统的商业与行政中心，港口与铁路是城市的支柱。估算：就业集中在中山路、台东与香港中路一带，浮山后与崂山开始承接新增居住，跨胶州湾只有轮渡与环湾公路。',
+      grow: { pop: { oldtown: 0.9, shibei: 1.05, shinan: 1.1, fushanhou: 1.15, licang: 1.1, laoshanq: 1.15 }, jobs: { oldtown: 0.95, shinan: 1.25, shibei: 1.1, licang: 1.15 } },
+      relocate: { pop: { oldtown: 0.0004 } },
+      demand: { decayHW: 1.0, lz: 1.05 },
+      corridors: [{ a: 'shibei', b: 'oldtown', f: 1.15 }, { a: 'fushanhou', b: 'shinan', f: 1.1 }, { a: 'licang', b: 'shibei', f: 1.1 }],
+      goals: [{ id: 'qd-g1', from: 2002, type: 'connect', months: 60, reward: 100000, title: '老城到台东', desc: '中山路与台东是青岛最热闹的两处商圈，公交在高峰时段拥挤。用地铁把栈桥与台东连起来。', anchors: [site('栈桥', 3), site('台东商圈', 3)] }] },
+    { id: 'qd-e2', from: 2006, name: '奥帆赛与东部', tag: '史实',
+      summary: '史实：2006 年奥帆中心开工，2008 年 8 月第 29 届奥运会帆船比赛在青岛举行。估算：香港中路成为新的商务中心，浮山后与崂山的大片住宅建成，老城人口向东部疏解，夏季旅游客流明显上升。',
+      grow: { pop: { fushanhou: 1.4, laoshanq: 1.35, shinan: 1.2, licang: 1.2, oldtown: 0.85 }, jobs: { shinan: 1.3, laoshanq: 1.4, licang: 1.2, shibei: 1.05 } },
+      relocate: { pop: { oldtown: 0.0005 } },
+      demand: { decayHW: 1.05, lz: 1.1 },
+      corridors: [{ a: 'fushanhou', b: 'shinan', f: 1.2 }, { a: 'laoshanq', b: 'shinan', f: 1.15 }, { a: 'shibei', b: 'oldtown', f: 1.1 }],
+      goals: [{ id: 'qd-g2', from: 2006, type: 'connect', months: 36, reward: 110000, title: '奥帆赛前的覆盖', desc: '奥帆赛期间，五四广场与奥帆中心一带客流集中。用地铁把五四广场与奥帆中心连起来。', anchors: [site('五四广场', 3), site('奥帆中心', 3)] }] },
+    { id: 'qd-e3', from: 2011, name: '桥隧与北岸', tag: '史实',
+      summary: '史实：2011 年 6 月胶州湾隧道与胶州湾跨海大桥通车，环湾交通格局改变。估算：李沧与城阳方向的居住与产业增长加快，北岸与主城之间的通勤成为新的主要走廊，港口与铁路货运继续外迁。',
+      grow: { pop: { licang: 1.35, laoshanq: 1.3, fushanhou: 1.2, shibei: 1.05, shinan: 1.05 }, jobs: { licang: 1.4, laoshanq: 1.35, shinan: 1.2 } },
+      demand: { decayHW: 1.1 },
+      corridors: [{ a: 'licang', b: 'shibei', f: 1.2 }, { a: 'laoshanq', b: 'shinan', f: 1.15 }, { a: 'fushanhou', b: 'shinan', f: 1.1 }],
+      goals: [{ id: 'qd-g3', from: 2011, type: 'connect', months: 60, reward: 120000, title: '北站与李村', desc: '青岛北站与李村商圈之间通勤量很大。用地铁把青岛北站与李村连起来。', anchors: [site('青岛北站', 4), site('李村商圈', 3)] }] },
+    { id: 'qd-e4', from: 2016, name: '轨道交通起步期', tag: '史实',
+      summary: '史实：2016 年 12 月青岛地铁 3 号线全线通车（真实线路不会自动出现）。估算：崂山与李沧的居住区继续扩张，香港中路与崂山高科技园的就业增长，夏季旅游与海滨休闲出行保持高位。',
+      grow: { pop: { licang: 1.3, laoshanq: 1.3, fushanhou: 1.2, oldtown: 0.9, shinan: 1.05 }, jobs: { shinan: 1.25, laoshanq: 1.3, licang: 1.3, shibei: 1.05 } },
+      demand: { hw: 1.02, decayHW: 1.1, lz: 1.1, hub: 1.1 },
+      corridors: [{ a: 'licang', b: 'shibei', f: 1.2 }, { a: 'laoshanq', b: 'shinan', f: 1.2 }, { a: 'fushanhou', b: 'shinan', f: 1.1 }],
+      goals: [{ id: 'qd-g4', from: 2016, type: 'connect', months: 60, reward: 140000, title: '老城到崂山', desc: '东部沿海一线的居住与就业连成一片。用地铁把栈桥一带的老城与崂山的石老人连起来。', anchors: [site('栈桥', 3), site('石老人', 4)] }] },
+    { id: 'qd-e5', from: 2021, name: '模拟未来', tag: '模拟',
+      summary: '模拟：此后的发展按模型推演，不代表真实历史。估算：崂山与李沧继续成长，老城以旅游与商业为主，环湾通勤与夏季客流保持高位。',
+      grow: { pop: { laoshanq: 1.25, licang: 1.2, fushanhou: 1.15, oldtown: 0.92 }, jobs: { laoshanq: 1.25, shinan: 1.15, licang: 1.15 } },
+      demand: { lz: 1.1, decayHW: 1.1 }, corridors: [{ a: 'laoshanq', b: 'shinan', f: 1.1 }] },
+  ];
+
   const INF = [[2000, 0.004], [2004, 0.039], [2008, 0.059], [2012, 0.026], [2016, 0.02], [2020, 0.025], [2030, 0.02], [2050, 0.02]];
   (CM.MAP_LIST = CM.MAP_LIST || []).push({
     id: 'qd', name: '青岛', title: '青岛 · 2000', sub: '真实地理 · 2000 年起 · 人民币',
@@ -199,6 +249,6 @@
         ],
       },
     },
-    cam: { cx: 52, cy: 40, zoom: 18 },
+    cam: { cx: 64, cy: 29, zoom: 18 },
   });
 })(window.CM);

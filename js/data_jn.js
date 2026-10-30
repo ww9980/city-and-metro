@@ -197,6 +197,56 @@
     places: (G.places || []).map(function (p) { return [p[0], p[1], p[2], p[3]]; }),
   };
 
+  // 阶段目标的锚点：用地标 / 设施的既有坐标，避免手填经纬度与投影不一致（名称写错时载入即报错）
+  const site = function (name, r) {
+    const L = data.landmarks || [], F = data.facilities || [];
+    const byName = L.find(function (l) { return l.name === name; });
+    if (byName && typeof byName.x === 'number') return { name: name, x: byName.x, y: byName.y, r: r };
+    const f = F.find(function (x) { return x.n === name; });
+    if (f) {
+      const l2 = f.lm && L.find(function (l) { return l.id === f.lm; });
+      if (l2 && typeof l2.x === 'number') return { name: name, x: l2.x, y: l2.y, r: r };
+      if (f.at) return { name: name, x: f.at[0], y: f.at[1], r: r };
+    }
+    throw new Error('济南：阶段目标锚点未找到 ' + name);
+  };
+
+  // 历史发展阶段（v2.2，eras.js）：summary 中「史实」可查证，「估算」为模型设定的发展倾向；grow 只改变人口与岗位增长的去向
+  // （总量仍按人口曲线），relocate 为每月疏解比例，corridors 为片区间通勤与购物去向倍数，demand 为出行强度与距离倍数，
+  // goals 为阶段目标（本城任务，奖励单位：万元）
+  data.eras = [
+    { id: 'jn-e1', from: 2000, name: '泉城老城时代', tag: '史实',
+      summary: '史实：2000 年的济南还没有地铁，泉城路尚未改为步行街，经十路是一条会堵车的城市干道。估算：人口与就业集中在泉城路、大观园与济南站一带，洪家楼与甸柳是东部的次中心，跨黄河的通道很少。',
+      grow: { pop: { oldcity: 0.9, lixia: 1.1, shizhong: 1.05, huaiyin: 1.05, tianqiao: 1.1, licheng: 1.15 }, jobs: { oldcity: 1.2, lixia: 1.15, shizhong: 1.1, tianqiao: 1.05 } },
+      relocate: { pop: { oldcity: 0.0004 } },
+      demand: { decayHW: 1.0 },
+      corridors: [{ a: 'lixia', b: 'oldcity', f: 1.15 }, { a: 'shizhong', b: 'oldcity', f: 1.1 }, { a: 'licheng', b: 'lixia', f: 1.1 }],
+      goals: [{ id: 'jn-g1', from: 2002, type: 'connect', months: 60, reward: 90000, title: '泉城纵轴', desc: '泉城路改造为步行街后，老城与东部洪家楼之间的公交更加拥挤。用地铁把泉城广场与洪家楼连起来。', anchors: [site('泉城广场', 3), site('洪家楼商圈', 3)] }] },
+    { id: 'jn-e2', from: 2005, name: '东部新区与全运', tag: '史实',
+      summary: '史实：2002 年泉城路改造为步行街，2003 年经十路拓宽，2009 年 10 月第十一届全运会在济南举行，奥体中心片区随之成型。估算：高新区与历城东部成片开发，老城人口向东西两翼疏解，经十路成为最繁忙的走廊。',
+      grow: { pop: { gaoxin: 1.8, licheng: 1.35, lixia: 1.2, oldcity: 0.85, tianqiao: 1.1, huaiyin: 1.1 }, jobs: { gaoxin: 2.0, lixia: 1.3, oldcity: 0.95, huaiyin: 1.15, shizhong: 1.05 } },
+      relocate: { pop: { oldcity: 0.0005 } },
+      demand: { decayHW: 1.05 },
+      corridors: [{ a: 'gaoxin', b: 'oldcity', f: 1.2 }, { a: 'licheng', b: 'lixia', f: 1.15 }, { a: 'lixia', b: 'oldcity', f: 1.1 }],
+      goals: [{ id: 'jn-g2', from: 2006, type: 'connect', months: 42, reward: 110000, title: '全运会与奥体', desc: '全运会主场馆设在东部奥体中心。用地铁把奥体中心与泉城广场连起来。', anchors: [site('济南奥体中心', 4), site('泉城广场', 3)] }] },
+    { id: 'jn-e3', from: 2011, name: '高铁西站与西进', tag: '史实',
+      summary: '史实：2011 年 6 月京沪高铁通车，济南西站启用。估算：西客站片区与槐荫西部开始大规模建设，高新区的产业与就业继续扩张，老城以商业与旅游为主，跨区通勤距离变长。',
+      grow: { pop: { gaoxin: 1.5, huaiyin: 1.35, licheng: 1.3, lixia: 1.15, oldcity: 0.85, tianqiao: 1.05 }, jobs: { gaoxin: 1.6, huaiyin: 1.5, lixia: 1.2, oldcity: 0.95 } },
+      demand: { decayHW: 1.1, hub: 1.1 },
+      corridors: [{ a: 'huaiyin', b: 'oldcity', f: 1.15 }, { a: 'gaoxin', b: 'lixia', f: 1.15 }],
+      goals: [{ id: 'jn-g3', from: 2011, type: 'connect', months: 60, reward: 120000, title: '高铁西站接驳', desc: '济南西站启用后，旅客与西客站片区的居民需要进城。用地铁把济南西站与大观园连起来。', anchors: [site('济南西站', 4), site('大观园商圈', 3)] }] },
+    { id: 'jn-e4', from: 2019, name: '轨道交通起步期', tag: '史实',
+      summary: '史实：2019 年济南地铁 1 号线开通（真实线路不会自动出现）。估算：高新区与东部新城成为就业增长最快的地区，西客站片区成型，老城人口继续小幅下降，跨黄河的通勤需求增加。',
+      grow: { pop: { gaoxin: 1.4, licheng: 1.3, huaiyin: 1.3, lixia: 1.1, oldcity: 0.85, tianqiao: 1.05 }, jobs: { gaoxin: 1.4, huaiyin: 1.3, lixia: 1.25, oldcity: 0.95 } },
+      demand: { hw: 1.02, decayHW: 1.1, hub: 1.1 },
+      corridors: [{ a: 'gaoxin', b: 'lixia', f: 1.2 }, { a: 'huaiyin', b: 'lixia', f: 1.1 }],
+      goals: [{ id: 'jn-g4', from: 2019, type: 'connect', months: 60, reward: 140000, title: '东站与老城', desc: '济南东站成为东部的新门户。用地铁把济南东站与泉城广场连起来。', anchors: [site('济南东站', 4), site('泉城广场', 3)] }] },
+    { id: 'jn-e5', from: 2021, name: '模拟未来', tag: '模拟',
+      summary: '模拟：此后的发展按模型推演，不代表真实历史。估算：高新区与东部新城继续成长，西客站片区与黄河以北逐步开发，老城保持稳定。',
+      grow: { pop: { gaoxin: 1.3, licheng: 1.25, huaiyin: 1.2, oldcity: 0.9 }, jobs: { gaoxin: 1.3, huaiyin: 1.2, lixia: 1.15 } },
+      demand: { lz: 1.1, decayHW: 1.1 }, corridors: [{ a: 'gaoxin', b: 'lixia', f: 1.1 }] },
+  ];
+
   const INF = [[2000, 0.004], [2004, 0.039], [2008, 0.059], [2012, 0.026], [2016, 0.02], [2020, 0.025], [2030, 0.02], [2050, 0.02]];
   (CM.MAP_LIST = CM.MAP_LIST || []).push({
     id: 'jn', name: '济南', title: '济南 · 2000', sub: '真实地理 · 2000 年起 · 人民币',

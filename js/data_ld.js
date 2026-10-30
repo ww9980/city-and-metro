@@ -320,6 +320,57 @@
     places: (G.places || []).map(function (p) { return [p[0], p[1], p[2], p[3]]; }),
   };
 
+  // 阶段目标的锚点：用地标 / 设施的既有坐标，避免手填经纬度与投影不一致（名称写错时载入即报错）
+  const site = function (name, r) {
+    const L = data.landmarks || [], F = data.facilities || [];
+    const byName = L.find(function (l) { return l.name === name; });
+    if (byName && typeof byName.x === 'number') return { name: name, x: byName.x, y: byName.y, r: r };
+    const f = F.find(function (x) { return x.n === name; });
+    if (f) {
+      const l2 = f.lm && L.find(function (l) { return l.id === f.lm; });
+      if (l2 && typeof l2.x === 'number') return { name: name, x: l2.x, y: l2.y, r: r };
+      if (f.at) return { name: name, x: f.at[0], y: f.at[1], r: r };
+    }
+    throw new Error('伦敦：阶段目标锚点未找到 ' + name);
+  };
+
+  // 历史发展阶段（v2.2，eras.js）：summary 中「史实」可查证，「估算」为模型设定的发展倾向；grow 只改变人口与岗位增长的去向
+  // （总量仍按人口曲线），relocate 为每月疏解比例，corridors 为片区间通勤与购物去向倍数，demand 为出行强度与距离倍数，
+  // goals 为阶段目标（本城任务，奖励单位：万英镑）
+  data.eras = [
+    { id: 'ld-e1', from: 1990, name: '衰退与码头区重建', tag: '史实',
+      summary: '史实：1990 年英国陷入衰退，3 月爆发人头税抗议；1991 年金丝雀码头第一座塔楼封顶，1992 年 9 月「黑色星期三」后开发商破产、由财团接管。估算：内城人口继续外迁，码头区的写字楼与公寓开始吸纳就业，金融与商务仍集中在伦敦城与西敏。',
+      grow: { pop: { canarywharf: 1.5, docklands: 1.25, royaldocks: 1.1, towerhamlets: 1.15, newham: 1.1, hackney: 1.05, wandsworth: 1.05, lewisham: 1.05, city: 0.75, westminster: 0.85, kensington: 0.9 }, jobs: { city: 1.2, westminster: 1.15, canarywharf: 1.35, towerhamlets: 1.2, southwark: 1.1, hammersmith: 1.1 } },
+      relocate: { pop: { city: 0.0002, westminster: 0.0002, camden: 0.0001 } },
+      demand: { decayHW: 1.0 },
+      corridors: [{ a: 'docklands', b: 'city', f: 1.2 }, { a: 'canarywharf', b: 'city', f: 1.15 }, { a: 'towerhamlets', b: 'city', f: 1.1 }],
+      goals: [{ id: 'ld-g1', from: 1993, type: 'connect', months: 60, reward: 340000, title: '码头区进城', desc: '金丝雀码头的写字楼陆续启用，通勤者需要跨过泰晤士河进入金融城。用地铁把金丝雀码头与伦敦城连起来。', anchors: [site('金丝雀码头商务区', 4), site('伦敦城（金融城）', 4)] }] },
+    { id: 'ld-e2', from: 1993, name: '银禧线与码头区', tag: '史实',
+      summary: '史实：1993 年银禧线延伸开工，1994 年英法海底隧道通车、滑铁卢国际车站启用，1999 年延伸段分段通车（2000 年 1 月全线）。估算：金丝雀码头成为第二个金融中心，狗岛与皇家码头的住宅与办公快速增加，东伦敦的就业机会明显增多。',
+      grow: { pop: { canarywharf: 1.45, royaldocks: 1.4, greenwichpen: 1.3, docklands: 1.2, newham: 1.2, towerhamlets: 1.1, southwark: 1.1, hackney: 1.05, greenwich: 1.1, city: 0.8, westminster: 0.9 }, jobs: { canarywharf: 1.75, city: 1.15, towerhamlets: 1.2, southwark: 1.15, newham: 1.1, westminster: 1.05 } },
+      relocate: { jobs: { city: 0.0003 } },
+      demand: { decayHW: 1.05 },
+      corridors: [{ a: 'canarywharf', b: 'city', f: 1.2 }, { a: 'royaldocks', b: 'canarywharf', f: 1.15 }, { a: 'docklands', b: 'city', f: 1.15 }, { a: 'greenwichpen', b: 'canarywharf', f: 1.1 }],
+      goals: [{ id: 'ld-g2', from: 1997, type: 'connect', months: 60, reward: 300000, title: '格林尼治半岛', desc: '千禧穹顶与半岛的开发带来新的通勤需求。用地铁连接格林尼治半岛与金丝雀码头。', anchors: [site('格林尼治大学（旧皇家海军学院）', 4), site('金丝雀码头商务区', 4)] }] },
+    { id: 'ld-e3', from: 2003, name: '拥堵费与奥运前期', tag: '史实',
+      summary: '史实：2003 年 2 月伦敦开征拥堵费，2005 年获得 2012 年奥运会主办权，2007 年 HS1 全线通车、圣潘克拉斯国际车站启用，2008 年全球金融危机冲击金融业。估算：斯特拉特福与纽汉开始大规模更新，东伦敦人口回升，外伦敦南部与东部继续扩张。',
+      grow: { pop: { newham: 1.3, greenwichpen: 1.3, royaldocks: 1.2, hackney: 1.15, towerhamlets: 1.1, croydon: 1.15, barking: 1.1, redbridge: 1.1, bexley: 1.05, city: 0.85, westminster: 0.9 }, jobs: { canarywharf: 1.45, city: 1.2, newham: 1.25, towerhamlets: 1.15, southwark: 1.15, westminster: 1.05, islington: 1.1 } },
+      demand: { decayHW: 1.1, lz: 1.05 },
+      corridors: [{ a: 'newham', b: 'city', f: 1.2 }, { a: 'greenwichpen', b: 'canarywharf', f: 1.15 }, { a: 'croydon', b: 'westminster', f: 1.1 }],
+      goals: [{ id: 'ld-g3', from: 2006, type: 'connect', months: 66, reward: 380000, title: '奥运走廊', desc: '奥运主会场设在斯特拉特福。用地铁把斯特拉特福与伦敦城、金丝雀码头连成一线。', anchors: [site('伦敦体育场', 4), site('伦敦城（金融城）', 4), site('金丝雀码头商务区', 4)] }] },
+    { id: 'ld-e4', from: 2012, name: '后奥运时期', tag: '史实',
+      summary: '史实：2012 年奥运会后东伦敦继续更新，横贯铁路（伊丽莎白线）在市中心施工，2016 年脱欧公投，2020 年疫情使通勤客流骤降，2022 年 5 月伊丽莎白线全线通车。估算：就业向东部的斯特拉特福、金丝雀码头与皇家码头分散，市中心办公需求趋于平稳，休闲与旅游出行增加。',
+      grow: { pop: { newham: 1.25, greenwichpen: 1.2, barking: 1.15, croydon: 1.15, bexley: 1.1, redbridge: 1.1, towerhamlets: 1.1, hackney: 1.1, city: 0.95, westminster: 0.95 }, jobs: { canarywharf: 1.3, city: 1.2, newham: 1.2, southwark: 1.2, towerhamlets: 1.1, westminster: 1.05 } },
+      relocate: { jobs: { city: 0.0002 } },
+      demand: { hw: 1.02, decayHW: 1.15, lz: 1.08, hub: 1.1 },
+      corridors: [{ a: 'newham', b: 'city', f: 1.2 }, { a: 'croydon', b: 'westminster', f: 1.1 }, { a: 'greenwichpen', b: 'canarywharf', f: 1.1 }],
+      goals: [{ id: 'ld-g4', from: 2015, type: 'connect', months: 84, reward: 460000, title: '横贯铁路走廊', desc: '参考伊丽莎白线：把帕丁顿、利物浦街与金丝雀码头连成一条东西向走廊。', anchors: [site('帕丁顿车站', 3), site('利物浦街车站', 3), site('金丝雀码头商务区', 4)] }] },
+    { id: 'ld-e5', from: 2021, name: '模拟未来', tag: '模拟',
+      summary: '模拟：此后的发展按模型推演，不代表真实历史。估算：东伦敦与外围自治市继续成长，市中心就业保持稳定，跨区与长距离通勤增加。',
+      grow: { pop: { newham: 1.15, barking: 1.15, greenwichpen: 1.15, croydon: 1.1, bexley: 1.05, redbridge: 1.05, city: 1.0, westminster: 1.0 }, jobs: { canarywharf: 1.2, city: 1.1, newham: 1.15, southwark: 1.1 } },
+      demand: { lz: 1.1, decayHW: 1.15 }, corridors: [{ a: 'barking', b: 'city', f: 1.1 }] },
+  ];
+
   const INF = [[1990, 0.07], [1991, 0.05], [1993, 0.03], [1996, 0.025], [2000, 0.02], [2005, 0.022], [2008, 0.035], [2012, 0.025], [2016, 0.015], [2020, 0.012], [2030, 0.02], [2050, 0.02]];
   (CM.MAP_LIST = CM.MAP_LIST || []).push({
     id: 'ld', name: '伦敦', title: '伦敦 · 1990', sub: '真实地理 · 1990 年起 · 英镑',

@@ -135,6 +135,56 @@
     places: (G.places || []).map(function (p) { return [p[0], p[1], p[2], p[3]]; }),
   };
 
+  // 阶段目标的锚点：用地标 / 设施的既有坐标，避免手填经纬度与投影不一致（名称写错时载入即报错）
+  const site = function (name, r) {
+    const L = data.landmarks || [], F = data.facilities || [];
+    const byName = L.find(function (l) { return l.name === name; });
+    if (byName && typeof byName.x === 'number') return { name: name, x: byName.x, y: byName.y, r: r };
+    const f = F.find(function (x) { return x.n === name; });
+    if (f) {
+      const l2 = f.lm && L.find(function (l) { return l.id === f.lm; });
+      if (l2 && typeof l2.x === 'number') return { name: name, x: l2.x, y: l2.y, r: r };
+      if (f.at) return { name: name, x: f.at[0], y: f.at[1], r: r };
+    }
+    throw new Error('泰安：阶段目标锚点未找到 ' + name);
+  };
+
+  // 历史发展阶段（v2.2，eras.js）：summary 中「史实」可查证，「估算」为模型设定的发展倾向；grow 只改变人口与岗位增长的去向
+  // （总量仍按人口曲线），relocate 为每月疏解比例，corridors 为片区间通勤与购物去向倍数，demand 为出行强度与距离倍数，
+  // goals 为阶段目标（本城任务，奖励单位：万元）
+  data.eras = [
+    { id: 'ta-e1', from: 2000, name: '岱庙与山城', tag: '史实',
+      summary: '史实：2000 年的泰安是一座以泰山旅游与铁路枢纽为生的小城，城区沿东岳大街东西展开，京沪铁路从城西经过。估算：人口与就业集中在岱庙、青年路与财源街一带，高新区尚未成形，登山客流集中在节假日。',
+      grow: { pop: { oldcity: 0.95, taishanq: 1.1, daiyue: 1.1 }, jobs: { oldcity: 1.1, taishanq: 1.15 } },
+      relocate: { pop: { oldcity: 0.0003 } },
+      demand: { decayHW: 1.0, lz: 1.1 },
+      corridors: [{ a: 'taishanq', b: 'oldcity', f: 1.15 }, { a: 'daiyue', b: 'oldcity', f: 1.05 }],
+      goals: [{ id: 'ta-g1', from: 2002, type: 'connect', months: 60, reward: 25000, title: '登山入口接驳', desc: '节假日的登山客流从泰山站涌向红门与天外村，公交排起长队。用地铁把泰山站与红门连起来。', anchors: [site('泰山站', 3), site('红门', 3)] }] },
+    { id: 'ta-e2', from: 2005, name: '高新区起步', tag: '史实',
+      summary: '史实：2005 年前后泰安高新区开始成片开发，城市重心逐步向东、向西两侧扩展。估算：老城人口向泰山大街与西部新区疏解，高新区的产业与就业开始增长，旅游客流随收入提高逐年增加。',
+      grow: { pop: { highzone: 1.6, daiyue: 1.25, taishanq: 1.1, oldcity: 0.9 }, jobs: { highzone: 1.8, taishanq: 1.15, oldcity: 1.0 } },
+      relocate: { pop: { oldcity: 0.0004 } },
+      demand: { decayHW: 1.05, lz: 1.1 },
+      corridors: [{ a: 'highzone', b: 'oldcity', f: 1.15 }, { a: 'taishanq', b: 'oldcity', f: 1.1 }],
+      goals: [{ id: 'ta-g2', from: 2007, type: 'connect', months: 60, reward: 25000, title: '高新区接驳', desc: '高新区的工厂与园区开始招工，职工多住在老城与东岳大街沿线。用地铁把青年路商圈与高新区连起来。', anchors: [site('青年路商圈', 3), site('山东科技大学', 4)] }] },
+    { id: 'ta-e3', from: 2011, name: '高铁与旅游期', tag: '史实',
+      summary: '史实：2011 年 6 月京沪高铁通车，泰安站启用，从北京、上海到泰山的时间大幅缩短。估算：高铁站周边与西部新区开始建设，旅游客流明显增长，节假日的老城与登山入口压力更大。',
+      grow: { pop: { daiyue: 1.35, highzone: 1.4, taishanq: 1.1, oldcity: 0.88 }, jobs: { highzone: 1.5, daiyue: 1.3, taishanq: 1.2, oldcity: 1.0 } },
+      demand: { decayHW: 1.05, lz: 1.15, hub: 1.15 },
+      corridors: [{ a: 'daiyue', b: 'oldcity', f: 1.2 }, { a: 'highzone', b: 'oldcity', f: 1.15 }],
+      goals: [{ id: 'ta-g3', from: 2011, type: 'connect', months: 60, reward: 30000, title: '高铁站进城', desc: '京沪高铁泰安站启用后，旅客需要进城。用地铁把泰安站与东岳大街的商务区连起来。', anchors: [site('泰安站（高铁）', 4), site('泰安商务区（东岳大街）', 3)] }] },
+    { id: 'ta-e4', from: 2020, name: '新城开发期', tag: '史实',
+      summary: '史实：2020 年前后泰安继续向西、向东扩展，高铁片区与高新区成为新的建设重点。估算：老城人口基本稳定，西部新城与高新区吸纳新增人口，旅游与休闲出行占比继续提高。',
+      grow: { pop: { daiyue: 1.35, highzone: 1.35, taishanq: 1.05, oldcity: 0.9 }, jobs: { daiyue: 1.35, highzone: 1.35, taishanq: 1.15, oldcity: 1.0 } },
+      demand: { hw: 1.02, decayHW: 1.1, lz: 1.15, hub: 1.1 },
+      corridors: [{ a: 'daiyue', b: 'taishanq', f: 1.2 }, { a: 'highzone', b: 'taishanq', f: 1.1 }],
+      goals: [{ id: 'ta-g4', from: 2020, type: 'connect', months: 60, reward: 35000, title: '高铁站到登山口', desc: '高铁客流与登山客流在同一座城市里交汇。用地铁把泰安站与红门连起来。', anchors: [site('泰安站（高铁）', 4), site('红门', 3)] }] },
+    { id: 'ta-e5', from: 2021, name: '模拟未来', tag: '模拟',
+      summary: '模拟：此后的发展按模型推演，不代表真实历史。估算：西部新城与高新区继续成长，老城保持稳定，旅游客流随城市名气提高。',
+      grow: { pop: { daiyue: 1.25, highzone: 1.25, taishanq: 1.05, oldcity: 0.92 }, jobs: { daiyue: 1.25, highzone: 1.25, taishanq: 1.1 } },
+      demand: { lz: 1.1, decayHW: 1.05 }, corridors: [{ a: 'daiyue', b: 'taishanq', f: 1.1 }] },
+  ];
+
   const INF = [[2000, 0.004], [2004, 0.039], [2008, 0.059], [2012, 0.026], [2016, 0.02], [2020, 0.025], [2030, 0.02], [2050, 0.02]];
   (CM.MAP_LIST = CM.MAP_LIST || []).push({
     id: 'ta', name: '泰安', title: '泰安 · 2000', sub: '真实地理 · 2000 年起 · 人民币',
