@@ -89,6 +89,19 @@
     localize(document.body);document.title=text('城市与地铁');invalidate();for(const f of listeners)f(language);
   }
   CM.I18n={text,get:()=>language,apply,localize,name:nameEnglish,search:s=>(String(s)+' '+text(String(s))).toLowerCase(),on(fn){listeners.add(fn);return()=>listeners.delete(fn);},missing:()=>[...missing]};
+  // 非中国地图：地名可按「原文/外文」显示（复用 nameEnglish 的词典与拼音兜底）。
+  // 仅当界面语言为简体中文且设置为 orig 时生效；英文/繁体界面已由 canvas 文本替换统一翻译。
+  const FOREIGN_MAP=/^(日本|法国|英国|美国|德国|韩国|意大利|西班牙|荷兰|新加坡|泰国|澳大利亚|加拿大|俄罗斯)/;
+  function foreignMap(){try{const mp=CM.curMap&&CM.curMap();return !!(mp&&FOREIGN_MAP.test(mp.region||''));}catch(e){return false;}}
+  CM.I18n.foreignMap=foreignMap;
+  CM.I18n.mapLabel=function(s){
+    if(!s)return s;
+    if(typeof CM.Settings==='undefined'||CM.Settings.get('mapNames')!=='orig')return s;
+    if(language!=='zh-CN')return s;
+    if(!foreignMap())return s;
+    if(!hasHan(s))return s;
+    return nameEnglish(s)||s;
+  };
   if(typeof document==='undefined')return;
   // Translate newly constructed controls before callers measure or attach them.
   const h=CM.U.h;CM.U.h=function(){const el=h.apply(this,arguments);localize(el);return el;};

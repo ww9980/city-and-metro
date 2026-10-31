@@ -24,6 +24,7 @@
   function clone(o) { try { return JSON.parse(JSON.stringify(o)); } catch (e) { return o; } }
   function subset(D) { return { landmarks: D.landmarks || [], centers: D.centers || [], regions: D.regions || [], defaultRegion: D.defaultRegion || null, facilities: D.facilities || [] }; }
   function clampMap(x, y) { return [U.clamp(x, 0, CM.CFG.W - 0.01), U.clamp(y, 0, CM.CFG.H - 0.01)]; }
+  function bboxOf(poly) { let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const q of poly) { if (q[0] < x0) x0 = q[0]; if (q[1] < y0) y0 = q[1]; if (q[0] > x1) x1 = q[0]; if (q[1] > y1) y1 = q[1]; } return [x0, y0, x1, y1]; }
 
   // ---------------- 样式 ----------------
   function injectCSS() {
@@ -31,8 +32,8 @@
     const st = document.createElement('style'); st.id = 'ed-css';
     st.textContent = `
     #ed-entry{position:fixed;left:14px;bottom:calc(14px + var(--safe-bottom,0px));z-index:960;display:none;
-      align-items:center;gap:6px;padding:8px 12px;border-radius:999px;border:1px solid var(--line-strong);
-      background:var(--surface);color:var(--text);font:600 13px/1 var(--font);cursor:pointer;
+      align-items:center;justify-content:center;width:40px;height:40px;padding:0;border-radius:50%;border:1px solid var(--line-strong);
+      background:var(--surface);color:var(--text);cursor:pointer;
       box-shadow:var(--shadow-sm);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
     #ed-entry:hover{background:var(--surface-2)}
     #ed-entry.on{display:flex}
@@ -41,14 +42,21 @@
     #ed-catch{position:absolute;inset:0;pointer-events:auto;cursor:crosshair}
     #ed-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
     #ed-marks{position:absolute;inset:0;pointer-events:none;overflow:visible}
-    .ed-mark{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;cursor:grab;user-select:none;
-      display:flex;align-items:center;gap:4px;white-space:nowrap}
-    .ed-dot{width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);flex:0 0 auto}
-    .ed-lab{font:600 11px/1 var(--font);color:#fff;background:rgba(15,23,42,.72);padding:2px 5px;border-radius:5px;
-      opacity:0;transition:opacity .12s;pointer-events:none;max-width:140px;overflow:hidden;text-overflow:ellipsis}
-    .ed-mark:hover .ed-lab,.ed-mark.sel .ed-lab{opacity:1}
+    /* 标记：容器是 0 尺寸锚点，圆点以 translate(-50%,-50%) 精确落在锚点上；标签向右偏移，不参与居中 */
+    .ed-mark{position:absolute;width:0;height:0;pointer-events:none}
+    .ed-dot{position:absolute;left:0;top:0;transform:translate(-50%,-50%);width:12px;height:12px;border-radius:50%;
+      border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);pointer-events:auto;cursor:grab}
     .ed-mark.sel .ed-dot{width:16px;height:16px;box-shadow:0 0 0 4px rgba(255,255,255,.6),0 2px 8px rgba(0,0,0,.5)}
-    .ed-mark.drag{cursor:grabbing}
+    .ed-mark.drag .ed-dot{cursor:grabbing}
+    .ed-lab{position:absolute;left:9px;top:0;transform:translateY(-50%);font:600 11px/1 var(--font);color:#fff;
+      background:rgba(15,23,42,.72);padding:2px 5px;border-radius:5px;opacity:0;transition:opacity .12s;pointer-events:none;
+      max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .ed-mark:hover .ed-lab,.ed-mark.sel .ed-lab{opacity:1}
+    #ed-handles{position:absolute;inset:0;pointer-events:none;overflow:visible}
+    .ed-handle{position:absolute;width:13px;height:13px;transform:translate(-50%,-50%);background:#fff;
+      border:2px solid var(--accent);border-radius:3px;pointer-events:auto;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+    .ed-handle[data-corner="0"],.ed-handle[data-corner="2"]{cursor:nwse-resize}
+    .ed-handle[data-corner="1"],.ed-handle[data-corner="3"]{cursor:nesw-resize}
     #ed-panel{position:absolute;top:0;right:0;width:320px;max-width:92vw;height:100%;pointer-events:auto;
       background:var(--surface-solid);border-left:1px solid var(--line-strong);display:flex;flex-direction:column;
       box-shadow:-10px 0 30px rgba(36,66,104,.12);font-family:var(--font);color:var(--text)}
@@ -125,11 +133,17 @@
   function Editor(R, ui, tools) {
     this.R = R; this.ui = ui; this.tools = tools;
     this.open = false; this.tab = 'landmarks'; this.sel = null; this.placing = false;
-    this.drag = null; this.pan = null; this.seq = 0;
+    this.drag = null; this.pan = null; this.rsz = null; this.seq = 0;
     injectCSS();
     this._build();
     this._bind();
     this._watchEntry();
+    // 关键：把标记定位挂到渲染循环里、在相机变换算好之后同一帧执行，
+    // 否则缩放/平移时标记会用到上一帧的变换，看起来相对底图漂移。
+    const self = this, origRender = R.render;
+    if (typeof origRender === 'function') {
+      R.render = function (dt, ui) { const out = origRender.call(this, dt, ui); if (self.open) self._positions(); return out; };
+    }
   }
   CM.Editor = Editor;
 
@@ -141,7 +155,8 @@
     // 入口按钮
     this.entry = document.createElement('button');
     this.entry.id = 'ed-entry'; this.entry.type = 'button';
-    this.entry.textContent = '地图编辑';
+    this.entry.title = '地图编辑'; this.entry.setAttribute('aria-label', '地图编辑');
+    this.entry.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
     this.entry.onclick = function () { this.enter(); }.bind(this);
     document.body.appendChild(this.entry);
 
@@ -150,6 +165,7 @@
       <div id="ed-catch"></div>
       <svg id="ed-svg"></svg>
       <div id="ed-marks"></div>
+      <div id="ed-handles"></div>
       <div id="ed-hint"></div>
       <aside id="ed-panel">
         <div id="ed-head">
@@ -170,7 +186,7 @@
       </aside>`;
     document.body.appendChild(root);
     this.root = root; this.catch = root.querySelector('#ed-catch'); this.svg = root.querySelector('#ed-svg');
-    this.marks = root.querySelector('#ed-marks'); this.hintEl = root.querySelector('#ed-hint');
+    this.marks = root.querySelector('#ed-marks'); this.handles = root.querySelector('#ed-handles'); this.hintEl = root.querySelector('#ed-hint');
     this.tabsEl = root.querySelector('#ed-tabs'); this.bodyEl = root.querySelector('#ed-body'); this.editEl = root.querySelector('#ed-edit');
 
     // tabs
@@ -216,10 +232,17 @@
     this.marks.addEventListener('pointerdown', function (e) {
       const el = e.target.closest('.ed-mark'); if (!el || !el._item) return;
       e.stopPropagation(); e.preventDefault();
-      self.sel = el._item; self._renderList(); self._renderEdit();
+      self.sel = el._item; self._renderList(); self._renderEdit(); self._syncHandles();
       const p = posOf(self.tab, el._item, self.D()); const w = self.R.unproject(e.clientX, e.clientY);
       self.drag = { item: el._item, startS: { x: e.clientX, y: e.clientY }, base: p ? { x: p.x, y: p.y } : { x: w.x, y: w.y }, moved: false, el: el };
       el.classList.add('drag'); el.classList.add('sel');
+      try { el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+    });
+    // 片区选中后，四角出现缩放手柄，拖拽改变片区大小（以原多边形的包围盒为基准按比例缩放）
+    this.handles.addEventListener('pointerdown', function (e) {
+      const el = e.target.closest('.ed-handle'); if (!el || !self.sel || !self.sel.poly) return;
+      e.stopPropagation(); e.preventDefault();
+      self.rsz = { item: self.sel, corner: +el.dataset.corner, bbox0: bboxOf(self.sel.poly), poly0: self.sel.poly.map(function (q) { return [q[0], q[1]]; }) };
       try { el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
     });
     window.addEventListener('pointermove', function (e) { self._onWinMove(e); });
@@ -261,6 +284,7 @@
   };
   Editor.prototype._onWinMove = function (e) {
     if (!this.open) return;
+    if (this.rsz) { const w = this.R.unproject(e.clientX, e.clientY); this._resizeTo(w.x, w.y); return; }
     if (this.drag) {
       const w = this.R.unproject(e.clientX, e.clientY);
       if (!this.drag.moved && Math.hypot(e.clientX - this.drag.startS.x, e.clientY - this.drag.startS.y) > 2) this.drag.moved = true;
@@ -278,6 +302,7 @@
   };
   Editor.prototype._onWinUp = function (e) {
     if (!this.open) return;
+    if (this.rsz) { this.rsz = null; this._renderList(); return; }
     if (this.drag) { const el = this.drag.el; if (el) el.classList.remove('drag'); this.drag = null; this._renderList(); this._renderEdit(); return; }
     if (this.pan) {
       const moved = this.pan.moved; this.pan = null;
@@ -311,6 +336,32 @@
     const arr = this.list(); const i = arr.indexOf(it);
     if (i >= 0) arr.splice(i, 1);
     this.sel = null; this._render(); this._rebuild();
+  };
+
+  // 拖拽四角手柄：把原多边形从起始包围盒线性映射到新包围盒（保持形状、改变大小）
+  Editor.prototype._resizeTo = function (mx, my) {
+    const r = this.rsz; if (!r || !r.item.poly) return;
+    const b = r.bbox0; let x0 = b[0], y0 = b[1], x1 = b[2], y1 = b[3];
+    mx = U.clamp(mx, 0, CM.CFG.W); my = U.clamp(my, 0, CM.CFG.H);
+    const c = r.corner;
+    if (c === 0) { x0 = mx; y0 = my; } else if (c === 1) { x1 = mx; y0 = my; } else if (c === 2) { x1 = mx; y1 = my; } else { x0 = mx; y1 = my; }
+    const min = 1;
+    if (x1 - x0 < min) { if (c === 0 || c === 3) x0 = x1 - min; else x1 = x0 + min; }
+    if (y1 - y0 < min) { if (c === 0 || c === 1) y0 = y1 - min; else y1 = y0 + min; }
+    const bw = (b[2] - b[0]) || 1, bh = (b[3] - b[1]) || 1, poly = r.item.poly;
+    for (let i = 0; i < r.poly0.length && i < poly.length; i++) {
+      const q = r.poly0[i], u = (q[0] - b[0]) / bw, v = (q[1] - b[1]) / bh;
+      poly[i][0] = U.clamp(x0 + u * (x1 - x0), 0, CM.CFG.W);
+      poly[i][1] = U.clamp(y0 + v * (y1 - y0), 0, CM.CFG.H);
+    }
+  };
+
+  // 片区被选中时显示四角缩放手柄；其它情况清空
+  Editor.prototype._syncHandles = function () {
+    if (!this.handles) return;
+    this.handles.innerHTML = '';
+    if (this.tab !== 'regions' || !this.sel || !this.sel.poly || !this.sel.poly.length) return;
+    for (let i = 0; i < 4; i++) { const el = document.createElement('div'); el.className = 'ed-handle'; el.dataset.corner = i; this.handles.appendChild(el); }
   };
 
   // ---------------- 保存（两种）/ 重开 / 重置 ----------------
@@ -405,7 +456,7 @@
     const addBtn = this.root.querySelector('#ed-add');
     addBtn.textContent = this.placing ? '点击地图放置…' : '＋ 添加';
     addBtn.classList.toggle('pri', !this.placing);
-    this._renderList(); this._renderEdit();
+    this._renderList(); this._renderEdit(); this._syncHandles();
   };
   Editor.prototype._renderList = function () {
     const arr = this.list(), tab = this.tab, self = this;
@@ -423,7 +474,7 @@
       if (d) { e.stopPropagation(); const i = +d.dataset.del; self.list().splice(i, 1); self.sel = null; self._render(); self._rebuild(); return; }
       const r = e.target.closest('.ed-row'); if (!r) return;
       const it = self.list()[+r.dataset.i]; if (!it) return;
-      self.sel = it; self._renderList(); self._renderEdit();
+      self.sel = it; self._renderList(); self._renderEdit(); self._syncHandles();
       const p = posOf(tab, it, self.D()); if (p && self.R.cam) { self.R.cam.cx = p.x; self.R.cam.cy = p.y; self.R.cam.fly = null; if (self.R.computeTransform) self.R.computeTransform(); }
     };
   };
@@ -484,7 +535,7 @@
       if (it === this.sel) el.classList.add('sel');
       this.marks.appendChild(el);
     }
-    this._positions();
+    this._positions(); this._syncHandles();
   };
 
   Editor.prototype._positions = function () {
@@ -503,6 +554,10 @@
         poly.setAttribute('points', out.join(' '));
         const selNow = poly._item === this.sel; poly.setAttribute('stroke-width', selNow ? '3' : '1.5');
       }
+    }
+    if (this.handles && this.handles.children.length === 4 && this.sel && this.sel.poly && this.sel.poly.length) {
+      const b = bboxOf(this.sel.poly), cs = [[b[0], b[1]], [b[2], b[1]], [b[2], b[3]], [b[0], b[3]]], hs = this.handles.children;
+      for (let i = 0; i < 4; i++) { const s = R.P(cs[i][0], cs[i][1], 0); hs[i].style.left = s.x + 'px'; hs[i].style.top = s.y + 'px'; }
     }
   };
 

@@ -4,6 +4,7 @@
   const KEY = 'cm1.settings';
   const DEF = {
     language: 'zh-CN',    // 仅切换显示语言，不改地图、模拟与存档中的原文
+    mapNames: 'zh',       // 非中国地图的地名：zh 中文 | orig 原文（外文）
     lighting: true, // Directional light for Canvas ground and buildings.
     theme: 'auto',        // light | dark | auto（跟随系统）
     uiScale: 1,           // 界面大小
@@ -46,6 +47,7 @@
     all: function () { return Object.assign({}, cur); },
     set: function (k, v) {
       if (k === 'language' && !['zh-CN', 'zh-TW', 'en'].includes(v)) v = 'zh-CN';
+      if (k === 'mapNames' && !['zh', 'orig'].includes(v)) v = 'zh';
       if (k === 'colorBlind') v = v === true;
       if (k === 'recentColors') v = recent(v);
       if (cur[k] === v) return;
@@ -65,6 +67,8 @@
     apply: function (k) {
       const root = document.documentElement;
       if (CM.I18n && (!k || k === 'language')) CM.I18n.apply(cur.language);
+      // 地名语言切换：让标注缓存失效，下一帧重绘
+      if (!k || k === 'mapNames') { if (CM.R) { CM.R.labelImage = null; CM.R.lastLabelKey = null; } }
       if (!k || k === 'theme') { if (CM.setTheme) CM.setTheme(Settings.resolvedTheme()); else root.dataset.theme = Settings.resolvedTheme(); }
       if (CM.R && (!k || k === 'lighting')) { CM.R.clearImages(); CM.R.dropThemeStash(); CM.R.clearFacilitySprites(); CM.R.overviewStale = true; }
       if (!k || k === 'uiScale') root.style.setProperty('--uiz', String(cur.uiScale));

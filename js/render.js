@@ -4329,6 +4329,8 @@
   Renderer.prototype.drawLabelContent = function (ctx, ui) {
     const g = this.game, z = this.z, v = this.view, city = g.city;
     if (g.preview) return;   // 开始界面背景不显示标注
+    // 非中国地图的地名语言：设置为「原文」时把中文地名转成外文（词典 + 拼音兜底）
+    const L = (CM.I18n && CM.I18n.mapLabel) || function (s) { return s; };
     // 标注开关渐隐渐现（不闪切）
     const step = (this.dt || 0.016) / 0.25;
     this.labA = U.clamp((this.labA == null ? (this.labelsOn ? 1 : 0) : this.labA) + (this.labelsOn ? step : -step), 0, 1);
@@ -4416,7 +4418,7 @@
         const h = this.tEase > 0.5 && this.bFade > 0.5 ? (lm.h ? lm.h * EX : 34 * EX * 1.6) : 0;
         const p = this.P(lm.x, lm.y, h);
         ctx.font = '11px ' + FONT;
-        const text = '◆ ' + lm.name;
+        const text = '◆ ' + L(lm.name);
         const w = this.textWidth(ctx, text);
         if (!fits(p.x - w / 2, p.y - 18, p.x + w / 2, p.y - 6)) continue;
         halo(text, p.x, p.y - 12, '11px ' + FONT, TH.landmarkInk, 'center');
@@ -4442,7 +4444,7 @@
         if (len < 2.4) continue;
         const pt = this.P(geom.x, geom.y, 0);
         if (pt.x < 0 || pt.y < 0 || pt.x > this.w || pt.y > this.h) continue;
-        const text = gr.name;
+        const text = L(gr.name);
         const tw = this.textWidth(ctx, text);
         if (!fits(pt.x - tw / 2, pt.y - 7, pt.x + tw / 2, pt.y + 7)) continue;
         seen.add(gr.name);
@@ -4452,11 +4454,11 @@
     if (z < 16 && this.mapLabA > 0.01 && this.layer !== 'flow') {
       const a = U.clamp((16 - z) / 5, 0, 1) * 0.75;
       for (const dl of (city.districtLabels || [])) {
-        const p = this.P(dl[1], dl[2], 0), font = '600 ' + (z < 9 ? 15 : 17) + 'px ' + FONT;
+        const p = this.P(dl[1], dl[2], 0), font = '600 ' + (z < 9 ? 15 : 17) + 'px ' + FONT, dn = L(dl[0]);
         ctx.globalAlpha = a * this.mapLabA;
-        halo(dl[0], p.x, p.y, font, TH.district, 'center');
+        halo(dn, p.x, p.y, font, TH.district, 'center');
         // 占位：之后的未开放区域标签避开区名
-        ctx.font = font; const tw = this.textWidth(ctx, dl[0]); fits(p.x - tw / 2 - 2, p.y - 11, p.x + tw / 2 + 2, p.y + 11);
+        ctx.font = font; const tw = this.textWidth(ctx, dn); fits(p.x - tw / 2 - 2, p.y - 11, p.x + tw / 2 + 2, p.y + 11);
       }
       ctx.globalAlpha = 1;
     }
@@ -4470,7 +4472,7 @@
         const cx = lock.info[k].x, cy = lock.info[k].y;
         if (cx < v.x0 || cx > v.x1 || cy < v.y0 || cy > v.y1) continue;
         const p = this.P(cx, cy, 0);
-        const text = '🔒 ' + rg.name.replace(/（.*）/, '') + ' · ' + city.lockText(city.cellAt(cx, cy));
+        const text = '🔒 ' + L(rg.name.replace(/（.*）/, '')) + ' · ' + city.lockText(city.cellAt(cx, cy));
         ctx.font = '11px ' + FONT;
         const w = this.textWidth(ctx, text);
         // 靠近地图边缘的区域：标签整体收进地图范围，不越出边界

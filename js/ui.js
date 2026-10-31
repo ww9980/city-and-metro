@@ -1994,15 +1994,17 @@
     const extra = function (key) { return (UI.settingsExtra[key] || []).map(function (f) { try { return f(); } catch (e) { console.error(e); return null; } }).filter(Boolean); };
     const pages = {
       display: function () {
-        return [group('显示')].concat(extra('display'), [
+        const rows = [group('显示')].concat(extra('display'), [
           row('label', '界面语言', seg('language', [['zh-CN', '简体中文'], ['zh-TW', '繁体中文'], ['en', 'English']]), '切换后立即生效，下次启动保留此选择'),
           row('sun', '主题', seg('theme', [['light', '浅色', 'sun'], ['dark', '深色', 'moon'], ['auto', '跟随系统']], function () { self.renderThemeBtns(); })),
           row('expand', '界面大小', seg('uiScale', [[0.9, '小'], [1, '标准'], [1.15, '大']])),
           group('地图'),
           row('label', '地图标注', seg('labels', [['all', '全部'], ['stations', '仅车站'], ['none', '关闭']])),
+          (CM.I18n && CM.I18n.foreignMap && CM.I18n.foreignMap()) ? row('label', '地名语言', seg('mapNames', [['zh', '中文'], ['orig', '外文']]), '非中国地图：地标、道路、片区等名称按中文或原文（外文）显示') : null,
           row('car', '车辆与行人', toggle('agents'), '关闭后交通模拟照常进行，只是不显示运动的车辆和行人'),
           group('辅助功能'),
           row('eyeOff', '色盲辅助模式', (function () { const b = toggle('colorBlind'); b.setAttribute('aria-label', '色盲辅助模式'); return b; })(), '增强线路配色与编号、图表线型和拥堵分级，原有线路颜色保留')]);
+        return rows.filter(Boolean);
       },
       audio: function () {
         volRows.length = 0;
