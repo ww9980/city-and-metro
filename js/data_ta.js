@@ -66,10 +66,10 @@
       at(36.1750, 117.0800, { pop: 14000, jobs: 6000, r: 1.1 }),    // 高新区
       at(36.1700, 117.1200, { pop: 12000, jobs: 4000, r: 1.2 }),    // 南部居住区
       at(36.1900, 117.0600, { pop: 12000, jobs: 4000, r: 1.2 }),    // 西部（天平湖）
-      at(36.2050, 116.9850, { pop: 6000, jobs: 3000, r: 1.4 }),     // 天平湖、大河
+      at(36.2100, 116.9720, { pop: 6000, jobs: 3000, r: 1.4 }),     // 天平湖、大河
       at(36.1800, 117.0250, { pop: 5000, jobs: 6000, r: 1.3 }),     // 高铁新区
       at(36.1700, 117.1800, { pop: 12000, jobs: 5000, r: 1.4 }),    // 上高、省庄
-      at(36.1500, 117.1500, { pop: 8000, jobs: 3000, r: 1.4 }),     // 天颐湖、南部新区
+      at(36.1300, 117.2050, { pop: 8000, jobs: 3000, r: 1.4 }),     // 天颐湖、南部新区
     ],
     rural: { pop: 400, jobs: 100 },
     roadYears: {
@@ -94,16 +94,15 @@
       Object.assign(at(36.2039, 117.0639), { id: 'ta_stadium', name: '泰安市体育中心', w: 260, d: 220, year: 1995, kind: 'stadium' }),
       Object.assign(at(36.1769, 117.0294), { id: 'ta_hsstation', name: '泰安站（高铁）', w: 300, d: 200, year: 2011, kind: 'rail' }),
       Object.assign(at(36.2244, 117.0321), { id: 'ta_taishanxueyuan', name: '泰山学院', w: 400, d: 300, year: 2002, kind: 'campus' }),
-      // v3 扩展区：中天门（此前缺失，被设施引用）、桃花峪、玉泉寺、黑龙潭、天平湖与大汶口遗址
-      Object.assign(at(36.2385, 117.1095), { id: 'ta_zhongtianmen', name: '中天门', w: 100, d: 80, year: 1264, kind: 'traditional', h: 847 }),
-      Object.assign(at(36.2620, 116.9800), { id: 'ta_taohuayu', name: '桃花峪', w: 140, d: 110, year: 1900, kind: 'traditional' }),
-      Object.assign(at(36.2760, 116.9950), { id: 'ta_yuquansi', name: '玉泉寺', w: 120, d: 90, year: 520, kind: 'temple' }),
-      Object.assign(at(36.2130, 117.0500), { id: 'ta_heilongtan', name: '黑龙潭', w: 200, d: 160, year: 1900, kind: 'open' }),
-      Object.assign(at(36.2080, 117.0900), { id: 'ta_fengyuxiang', name: '冯玉祥墓', w: 150, d: 120, year: 1953, kind: 'memorial' }),
-      Object.assign(at(36.2050, 116.9750), { id: 'ta_tianping', name: '天平湖', w: 1200, d: 900, year: 1958, kind: 'open' }),
-      Object.assign(at(36.1350, 117.0950), { id: 'ta_dawenkou', name: '大汶口遗址', w: 400, d: 300, year: -3500, kind: 'memorial' }),
+      // v3 扩展区：中天门、桃花峪、玉泉寺、黑龙潭、天平湖、天颐湖（坐标按真实地理校正；大汶口遗址距城约 18 km，超出本图范围，已移除）
+      Object.assign(at(36.2497, 117.1008), { id: 'ta_zhongtianmen', name: '中天门', w: 100, d: 80, year: 1264, kind: 'traditional', h: 847 }),
+      Object.assign(at(36.2528, 116.9775), { id: 'ta_taohuayu', name: '桃花峪', w: 140, d: 110, year: 1900, kind: 'traditional' }),
+      Object.assign(at(36.2833, 117.0047), { id: 'ta_yuquansi', name: '玉泉寺', w: 120, d: 90, year: 520, kind: 'temple' }),
+      Object.assign(at(36.2108, 117.0455), { id: 'ta_heilongtan', name: '黑龙潭', w: 200, d: 160, year: 1900, kind: 'open' }),
+      Object.assign(at(36.2040, 117.0905), { id: 'ta_fengyuxiang', name: '冯玉祥墓', w: 150, d: 120, year: 1953, kind: 'memorial' }),
+      Object.assign(at(36.2100, 116.9720), { id: 'ta_tianping', name: '天平湖', w: 1200, d: 900, year: 1958, kind: 'open' }),
       Object.assign(at(36.1880, 117.1200), { id: 'ta_laojie', name: '泰安老街', w: 300, d: 240, year: 2015, kind: 'box' }),
-      Object.assign(at(36.1550, 117.1500), { id: 'ta_tianyihu', name: '天颐湖', w: 900, d: 700, year: 2005, kind: 'open' }),
+      Object.assign(at(36.1300, 117.2050), { id: 'ta_tianyihu', name: '天颐湖', w: 900, d: 700, year: 2005, kind: 'open' }),
       Object.assign(at(36.1700, 117.0250), { id: 'ta_hsrplaza', name: '泰安站广场', w: 300, d: 220, year: 2011, kind: 'box' }),
     ],
     facilities: [
@@ -136,7 +135,6 @@
       { id: 'ta_fengyuxiang', n: '冯玉祥墓', t: 'scenic', lm: 'ta_fengyuxiang', w: 0.005 },
       { id: 'ta_tianping', n: '天平湖旅游度假区', t: 'park', lm: 'ta_tianping', w: [[2000, 0.004], [2010, 0.012]] },
       { id: 'ta_tianyihu', n: '天颐湖', t: 'park', lm: 'ta_tianyihu', w: [[2000, 0], [2008, 0.01]] },
-      { id: 'ta_dawenkou', n: '大汶口遗址', t: 'scenic', lm: 'ta_dawenkou', w: 0.006 },
       { id: 'ta_laojie', n: '泰安老街', t: 'venue', lm: 'ta_laojie', w: [[2000, 0], [2015, 0.012]] },
       { id: 'ta_hsr_cbd', n: '高铁新区商务区', t: 'cbd', at: ll(36.1800, 117.0250), y0: 2012, w: [[2012, 0.004], [2025, 0.016]] },
       { id: 'ta_hsr_shop', n: '高铁站前商圈', t: 'shop', at: ll(36.1790, 117.0300), y0: 2013, w: 0.014 },

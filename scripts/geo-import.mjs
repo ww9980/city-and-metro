@@ -48,10 +48,21 @@ const ADMIN_MAP = (function () {
 const COAST = (function () {
   const s = arg('coast', '');
   if (!s) return null;
-  const p = s.split(',').map(Number);
+  const p = s.split(';')[0].split(',').map(Number);   // 第一个探测点（多点的完整列表见 COAST_PTS）
   return p.length === 2 && p.every(Number.isFinite) ? p : null;
 })();
+// 可以给多个「确定在海里」的探测点（分号分隔）：海面取各点泛洪结果的并集。
+// 港湾被船闸、码头分成几块时，单点只能填到其中一块。
+const COAST_PTS = (function () {
+  const s = arg('coast', '');
+  if (!s) return [];
+  return s.split(';').map(function (t) { const p = t.split(',').map(Number); return p.length === 2 && p.every(Number.isFinite) ? p : null; }).filter(Boolean);
+})();
 const SEA_NAME = arg('seaname', '海');
+// 海岸线闭合方式：sea = 用最长海岸链沿图边闭合（适合单侧海岸，如上海、东京）；
+// land = 整幅地图减去陆地（每条海岸链向不含探测点的一侧闭合即得一块陆地，作为孔洞）。
+// 半岛、多海湾的城市（利物浦、青岛、布里斯托尔）只有 land 模式能得到正确的海面。
+const COAST_MODE = arg('coastmode', 'sea');
 
 // ---------------- 投影 ----------------
 const px = (lon) => (lon - lon0) * kx;
@@ -393,12 +404,22 @@ if (COAST) {
       }
       return out;
     };
-    const main = chains[0];
-    const sx = main[0], sy = main[1], ex = main[main.length - 2], ey = main[main.length - 1];
-    const ringOfBorder = (dir) => {
+    const probe = [px(COAST[1]), py(COAST[0])];
+
+    if (COAST_MODE === 'flood') {
+      const rings = floodSea(COAST_PTS.map(function (p) { return [px(p[1]), py(p[0])]; }), openCoast, closedCoast, W, H);
+      if (!rings) console.error('警告：泛洪起点落在海岸线或图外，海面为空');
+      else {
+        const keep = rings.filter(r => { let a = 0; const n = r.length / 2; for (let k = 0; k < n; k++) { const j = (k + 1) % n; a += r[2 * k] * r[2 * j + 1] - r[2 * j] * r[2 * k + 1]; } return Math.abs(a) / 2 > 0.05; });
+        const row = polyRow(SEA_NAME, keep.map(r => [true, r]));
+        if (row) { water.push(row); console.log(`  海面（泛洪）：${keep.length} 个环，${keep.reduce((v, r) => v + r.length / 2, 0)} 点`); }
+      }
+    } else {
+    const ringOf = (ch, dir) => {
+      const sx = ch[0], sy = ch[1], ex = ch[ch.length - 2], ey = ch[ch.length - 1];
       const path = borderPath(sAt(ex, ey), sAt(sx, sy), dir);
       const ring = [];
-      for (let k = 0; k < main.length; k += 2) ring.push(main[k], main[k + 1]);
+      for (let k = 0; k < ch.length; k += 2) ring.push(ch[k], ch[k + 1]);
       // 端点吸附到边界，避免与边界路径之间留下缝
       ring[0] = Math.max(0, Math.min(W, ring[0])); ring[1] = Math.max(0, Math.min(H, ring[1]));
       ring[ring.length - 2] = Math.max(0, Math.min(W, ring[ring.length - 2]));
@@ -406,18 +427,109 @@ if (COAST) {
       for (const p of path) ring.push(p[0], p[1]);
       return ring;
     };
-    const cands = [ringOfBorder(1), ringOfBorder(-1)];
-    const probe = [px(COAST[1]), py(COAST[0])];
-    let sea = cands.find(r => inPoly(probe[0], probe[1], r));
-    if (!sea) { sea = cands[0]; console.error('警告：两个候选海面都不包含探测点，取第一个'); }
-    const rings = [[true, sea]];
-    for (const isl of closedCoast) {
-      const c = [isl[0], isl[1]];
-      if (inPoly(c[0], c[1], sea)) rings.push([false, isl]);
+    const ringArea = (r) => { let a = 0; const n = r.length / 2; for (let k = 0; k < n; k++) { const j = (k + 1) % n; a += r[2 * k] * r[2 * j + 1] - r[2 * j] * r[2 * k + 1]; } return Math.abs(a) / 2; };
+
+    if (COAST_MODE === 'land') {
+      // 海面 = 整幅地图减去陆地：每条海岸链向「不含探测点」的一侧闭合得到一块陆地，作为孔洞。
+      // 游戏用奇偶填充，孔洞会正确挖空；因此重叠的孔洞会互相抵消，需要先去重。
+      const land = [];
+      for (const ch of chains) for (const dir of [1, -1]) {
+        const r = ringOf(ch, dir);
+        if (!inPoly(probe[0], probe[1], r)) land.push(r);
+      }
+      for (const isl of closedCoast) land.push(isl);
+      land.sort((a, b) => ringArea(b) - ringArea(a));
+      const kept = [];
+      for (const r of land) {
+        if (ringArea(r) < 0.3) continue;                       // 过滤细碎噪声
+        if (kept.some(k => inPoly(r[0], r[1], k))) continue;    // 已被更大的陆地包含
+        kept.push(r);
+      }
+      const bboxRing = [0, 0, W, 0, W, H, 0, H];
+      const rings = [[true, bboxRing]];
+      for (const r of kept) rings.push([false, r]);
+      const row = polyRow(SEA_NAME, rings);
+      if (row) {
+        water.push(row); waysPts.water += bboxRing.length / 2;
+        console.log(`  海面（整幅减陆地）：海岸链 ${chains.length} 条，保留陆地 ${kept.length} 块，闭合岛屿 ${closedCoast.length} 个`);
+      }
+    } else {
+      const main = chains[0];
+      const cands = [ringOf(main, 1), ringOf(main, -1)];
+      let sea = cands.find(r => inPoly(probe[0], probe[1], r));
+      if (!sea) { sea = cands[0]; console.error('警告：两个候选海面都不包含探测点，取第一个'); }
+      const rings = [[true, sea]];
+      for (const isl of closedCoast) {
+        if (inPoly(isl[0], isl[1], sea)) rings.push([false, isl]);
+      }
+      const row = polyRow(SEA_NAME, rings);
+      if (row) { water.push(row); waysPts.water += sea.length / 2; console.log(`  海面：海岸链 ${main.length / 2} 点，岛屿 ${rings.length - 1} 个`); }
     }
-    const row = polyRow(SEA_NAME, rings);
-    if (row) { water.push(row); waysPts.water += sea.length / 2; console.log(`  海面：海岸链 ${main.length / 2} 点，岛屿 ${rings.length - 1} 个`); }
+    }
   }
+}
+
+
+// 海岸线泛洪：把 coastline 栅格化为墙，从「已知在海里的探测点」做 4 邻域填充，再把填充区的边界边串成环。
+// 半岛与多海湾的城市（利物浦、青岛、布里斯托尔）用「最长海岸链 + 图边闭合」会判错内外，泛洪不受海岸形态影响。
+function floodSea(probeCells, openCoast, closedCoast, W, H) {
+  const S = 4, FW = W * S, FH = H * S, N = FW * FH;
+  const wall = new Uint8Array(N);
+  const mark = (ax, ay, bx, by) => {
+    const dx = bx - ax, dy = by - ay, steps = Math.max(Math.abs(dx), Math.abs(dy));
+    if (!steps) { if (ax >= 0 && ay >= 0 && ax < FW && ay < FH) wall[ay * FW + ax] = 1; return; }
+    for (let k = 0; k <= steps; k++) {
+      const x = Math.round(ax + dx * k / steps), y = Math.round(ay + dy * k / steps);
+      if (x >= 0 && y >= 0 && x < FW && y < FH) wall[y * FW + x] = 1;
+    }
+  };
+  for (const line of openCoast.concat(closedCoast)) {
+    for (let k = 0; k + 3 < line.length; k += 2) mark(line[k] * S, line[k + 1] * S, line[k + 2] * S, line[k + 3] * S);
+  }
+  const sea = new Uint8Array(N);
+  const stack = [];
+  let seeded = 0;
+  for (const pc of probeCells) {
+    const sx = Math.round(pc[0] * S), sy = Math.round(pc[1] * S);
+    if (sx < 0 || sy < 0 || sx >= FW || sy >= FH || wall[sy * FW + sx] || sea[sy * FW + sx]) continue;
+    sea[sy * FW + sx] = 1; stack.push(sy * FW + sx); seeded++;
+  }
+  if (!seeded) return null;
+  while (stack.length) {
+    const c = stack.pop(), x = c % FW, y = (c / FW) | 0;
+    if (x > 0 && !wall[c - 1] && !sea[c - 1]) { sea[c - 1] = 1; stack.push(c - 1); }
+    if (x < FW - 1 && !wall[c + 1] && !sea[c + 1]) { sea[c + 1] = 1; stack.push(c + 1); }
+    if (y > 0 && !wall[c - FW] && !sea[c - FW]) { sea[c - FW] = 1; stack.push(c - FW); }
+    if (y < FH - 1 && !wall[c + FW] && !sea[c + FW]) { sea[c + FW] = 1; stack.push(c + FW); }
+  }
+  // 边界边：海格子与非海（或图外）相邻的一侧，按顺时针绕行方向记录
+  const VW = FW + 1, edges = new Map();
+  const key = (x, y) => y * VW + x;
+  const add = (x0, y0, x1, y1) => { const k = key(x0, y0); let a = edges.get(k); if (!a) { a = []; edges.set(k, a); } a.push(x1, y1); };
+  for (let y = 0; y < FH; y++) for (let x = 0; x < FW; x++) {
+    if (!sea[y * FW + x]) continue;
+    if (y === 0 || !sea[(y - 1) * FW + x]) add(x, y, x + 1, y);
+    if (x === FW - 1 || !sea[y * FW + x + 1]) add(x + 1, y, x + 1, y + 1);
+    if (y === FH - 1 || !sea[(y + 1) * FW + x]) add(x + 1, y + 1, x, y + 1);
+    if (x === 0 || !sea[y * FW + x - 1]) add(x, y + 1, x, y);
+  }
+  const rings = [];
+  while (edges.size) {
+    const fk = edges.keys().next().value;
+    let cx = fk % VW, cy = (fk / VW) | 0;
+    const ring = [cx, cy];
+    for (let guard = 0; guard < 4e6; guard++) {
+      const k = key(cx, cy), a = edges.get(k);
+      if (!a || !a.length) break;
+      const nx = a[a.length - 2], ny = a[a.length - 1];
+      if (a.length <= 2) edges.delete(k); else a.length -= 2;
+      cx = nx; cy = ny;
+      ring.push(cx, cy);
+      if (cx === ring[0] && cy === ring[1]) break;
+    }
+    if (ring.length >= 8) rings.push(ring.map(v => v / S));
+  }
+  return rings;
 }
 
 // ---- 合并道路、支路与铁路线段，写入 roads / streets / rail ----

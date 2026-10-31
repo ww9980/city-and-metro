@@ -9,6 +9,7 @@
   ui.tools = tools;
   if (CM.Quick) CM.Quick.init(ui);
   CM.R = R; CM.ui = ui; CM.tools = tools;
+  CM.editor = new CM.Editor(R, ui, tools);
   CM.Follow.init(ui);
   CM.agents = new CM.Agents();
   CM.game = null;

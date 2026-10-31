@@ -56,8 +56,12 @@
       { id: 'stockport', name: '斯托克波特', district: ['Stockport'], open: 2000, plan: 'resind' },
       { id: 'bury', name: '伯里（拉德克利夫·怀特菲尔德）', district: ['Bury'], open: 2000, plan: 'res' },
       { id: 'oldham', name: '奥尔德姆', district: ['Oldham'], open: 2005, plan: 'res' },
+      { id: 'tameside', name: '泰姆赛德（阿什顿安德莱恩·海德）', district: ['Tameside'], open: 2000, plan: 'resind' },
+      { id: 'rochdale', name: '罗奇代尔（米德尔顿·海伍德）', district: ['Rochdale'], open: 2005, plan: 'res' },
+      { id: 'bolton', name: '博尔顿（法恩沃思·霍里奇）', district: ['Bolton'], open: 2005, plan: 'res' },
+      { id: 'wigan', name: '维根（利·阿瑟顿）', district: ['Wigan'], open: 2010, plan: 'res' },
     ],
-    defaultRegion: { id: 'outer', name: '外围（曼彻斯特运河与城市边缘）', open: 2010, plan: 'res' },
+    defaultRegion: { id: 'outer', name: '外围（曼彻斯特运河与城市边缘）', open: 2015, plan: 'res' },
     plans: CM.DATA.plans,
 
     // 2000 年人口与就业中心（估算，人/km²；r 约为影响半径 km）
