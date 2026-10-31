@@ -17,8 +17,12 @@
 
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function num(v, d) { const n = Number(v); return isFinite(n) ? n : d; }
-  function ovKey(id) { return 'cm.editor.' + id; }
+  function ovKey(id) { return 'cm.editor.' + id; }          // 本机覆盖层（localStorage 保存）
+  function bakedKey(id) { return 'cm.editor.baked.' + id; } // 覆写原始数据（写回地图数据对象）
   function readOv(id) { try { const s = localStorage.getItem(ovKey(id)); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
+  function readBaked(id) { try { const s = localStorage.getItem(bakedKey(id)); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
+  function clone(o) { try { return JSON.parse(JSON.stringify(o)); } catch (e) { return o; } }
+  function subset(D) { return { landmarks: D.landmarks || [], centers: D.centers || [], regions: D.regions || [], defaultRegion: D.defaultRegion || null, facilities: D.facilities || [] }; }
   function clampMap(x, y) { return [U.clamp(x, 0, CM.CFG.W - 0.01), U.clamp(y, 0, CM.CFG.H - 0.01)]; }
 
   // ---------------- 样式 ----------------
@@ -70,6 +74,8 @@
     .ed-f input,.ed-f select{flex:1;min-width:0;padding:6px 8px;border-radius:8px;border:1px solid var(--line-strong);
       background:var(--surface-solid);color:var(--text);font:500 12.5px/1 var(--font)}
     #ed-foot{border-top:1px solid var(--line);padding:10px 12px;display:flex;flex-wrap:wrap;gap:6px}
+    #ed-status{flex:1 1 100%;font-size:11px;color:var(--muted);padding-top:1px}
+    #ed-status b{color:var(--accent);font-weight:700}
     .ed-btn{flex:1 1 auto;padding:8px 10px;border-radius:9px;border:1px solid var(--line-strong);background:var(--surface-solid);
       color:var(--text);font:600 12px/1 var(--font);cursor:pointer;white-space:nowrap}
     .ed-btn:hover{background:var(--surface-2)}
@@ -148,16 +154,18 @@
       <aside id="ed-panel">
         <div id="ed-head">
           <div id="ed-title"><span>地图编辑器</span><button class="ed-btn" id="ed-close" style="flex:0 0 auto;padding:5px 9px">关闭</button></div>
-          <div id="ed-sub">在地图上点击放置、拖动移动、右侧修改属性。改动保存在本机，下次载入该图自动应用。</div>
+          <div id="ed-sub">点击放置、拖动移动、右侧修改属性。<b>存到本机</b>只在本浏览器生效（覆盖层）；<b>覆写本图</b>会改写该图的初始数据。</div>
         </div>
         <div id="ed-tabs"></div>
         <div id="ed-body"></div>
         <div id="ed-edit"></div>
         <div id="ed-foot">
           <button class="ed-btn pri" id="ed-add">＋ 添加</button>
-          <button class="ed-btn" id="ed-save">保存</button>
-          <button class="ed-btn" id="ed-apply">保存并重开</button>
+          <button class="ed-btn" id="ed-save-local" title="保存为覆盖层，仅本浏览器生效，不修改地图初始数据">存到本机</button>
+          <button class="ed-btn" id="ed-save-baked" title="把编辑写回该图的初始数据（可在重置中恢复）">覆写本图</button>
+          <button class="ed-btn" id="ed-restart" title="用已保存的数据重新生成城市">重开本图</button>
           <button class="ed-btn danger" id="ed-reset">重置</button>
+          <div id="ed-status"></div>
         </div>
       </aside>`;
     document.body.appendChild(root);
@@ -174,9 +182,11 @@
 
     root.querySelector('#ed-close').onclick = function () { this.exit(); }.bind(this);
     root.querySelector('#ed-add').onclick = function () { this.placing = !this.placing; this._render(); this._hint(this.placing ? '点击地图放置新的' + this.tabDef().name : ''); }.bind(this);
-    root.querySelector('#ed-save').onclick = function () { this.save(); }.bind(this);
-    root.querySelector('#ed-apply').onclick = function () { this.applyAndRestart(); }.bind(this);
+    root.querySelector('#ed-save-local').onclick = function () { this.saveLocal(); }.bind(this);
+    root.querySelector('#ed-save-baked').onclick = function () { this.saveBaked(); }.bind(this);
+    root.querySelector('#ed-restart').onclick = function () { this.restart(); }.bind(this);
     root.querySelector('#ed-reset').onclick = function () { this.reset(); }.bind(this);
+    this.statusEl = root.querySelector('#ed-status');
 
     // 编辑区：事件委托
     this.editEl.addEventListener('input', function (e) {
@@ -235,7 +245,7 @@
     this.open = true; this.placing = false; this.sel = null; this.drag = null; this.pan = null;
     this.root.classList.add('on'); this.entry.classList.remove('on');
     if (this.tools) this.tools.setTool('select');
-    this._render(); this._rebuild();
+    this._render(); this._rebuild(); this._updateStatus();
     this._raf = requestAnimationFrame(this._loop);
   };
   Editor.prototype.exit = function () {
@@ -303,21 +313,79 @@
     this.sel = null; this._render(); this._rebuild();
   };
 
-  // ---------------- 保存 / 应用 / 重置 ----------------
-  Editor.prototype.save = function () {
+  // ---------------- 保存（两种）/ 重开 / 重置 ----------------
+  Editor.prototype.snapshot = function () { return clone(subset(this.D())); };
+
+  // 选项一：存到本机（localStorage 覆盖层，不改地图初始数据）
+  Editor.prototype.saveLocal = function () {
+    try {
+      localStorage.setItem(ovKey(CM.mapId), JSON.stringify(subset(this.D())));
+      this._toast('已存到本机：仅本浏览器生效（覆盖层），不改地图初始数据');
+    } catch (e) { this._toast('保存失败：' + e.message); }
+    this._updateStatus();
+  };
+
+  // 选项二：覆写本图原始数据（写回 CM.MAPS[id].data，并保存为新的初始数据；保留快照以便重置恢复）
+  Editor.prototype.saveBaked = function () {
+    if (!window.confirm('覆写本图原始数据？\n\n当前编辑会成为该图的初始数据（本浏览器内所有新游戏都用它）。\n之后可用「重置」恢复出厂数据。')) return;
+    const id = CM.mapId, m = CM.MAPS[id], snap = this.snapshot();
+    if (m && m.data) {
+      if (!m._origData) m._origData = clone(subset(m.data));   // 首次覆写前留一份原样
+      m.data.landmarks = snap.landmarks; m.data.centers = snap.centers; m.data.regions = snap.regions;
+      m.data.defaultRegion = snap.defaultRegion; m.data.facilities = snap.facilities;
+    }
+    // 同步当前运行中的地图数据（下一次重开本图时完全生效）
     const D = this.D();
-    const o = { landmarks: D.landmarks || [], centers: D.centers || [], regions: D.regions || [], defaultRegion: D.defaultRegion || null, facilities: D.facilities || [] };
-    try { localStorage.setItem(ovKey(CM.mapId), JSON.stringify(o)); this._toast('已保存到本机'); } catch (e) { this._toast('保存失败：' + e.message); }
+    D.landmarks = snap.landmarks; D.centers = snap.centers; D.regions = snap.regions;
+    D.defaultRegion = snap.defaultRegion; D.facilities = snap.facilities;
+    try { localStorage.setItem(bakedKey(id), JSON.stringify(snap)); localStorage.removeItem(ovKey(id)); } catch (e) { /* ignore */ }
+    this.sel = null; this._render(); this._rebuild(); this._updateStatus();
+    this._toast('已覆写本图原始数据（重开本图后完全生效）');
   };
-  Editor.prototype.reset = function () {
-    try { localStorage.removeItem(ovKey(CM.mapId)); } catch (e) { /* ignore */ }
-    this._toast('已清除本图编辑，重开本图后恢复原样');
-  };
-  Editor.prototype.applyAndRestart = function () {
-    this.save();
+
+  Editor.prototype.restart = function () {
     const g = CM.game; const mode = g ? g.mode : 'free'; const map = CM.mapId;
     this.exit();
     if (CM.newGame) CM.newGame({ map: map, mode: mode });
+  };
+
+  Editor.prototype.reset = function () {
+    const id = CM.mapId, m = CM.MAPS[id];
+    try { localStorage.removeItem(ovKey(id)); localStorage.removeItem(bakedKey(id)); } catch (e) { /* ignore */ }
+    if (m && m._origData) {   // 覆写过：把地图数据对象恢复成覆写前的样子
+      const o = m._origData;
+      m.data.landmarks = o.landmarks; m.data.centers = o.centers; m.data.regions = o.regions;
+      m.data.defaultRegion = o.defaultRegion; m.data.facilities = o.facilities;
+      delete m._origData;
+      const D = this.D();
+      D.landmarks = o.landmarks; D.centers = o.centers; D.regions = o.regions;
+      D.defaultRegion = o.defaultRegion; D.facilities = o.facilities;
+    }
+    this.sel = null; this._render(); this._rebuild(); this._updateStatus();
+    this._toast('已清除本图编辑（本机 + 覆写），重开本图恢复出厂数据');
+  };
+
+  Editor.prototype._updateStatus = function () {
+    if (!this.statusEl) return;
+    const id = CM.mapId;
+    const baked = !!readBaked(id), local = !!readOv(id);
+    let s;
+    if (baked) s = '本图：<b>已覆写原始数据</b>';
+    else if (local) s = '本图：已存到本机（覆盖层）';
+    else s = '本图：未保存编辑';
+    this.statusEl.innerHTML = s;
+  };
+
+  // 载入地图时：先应用「覆写」到地图数据对象（在 useMap 的 Object.assign 之前），再应用「本机」覆盖层
+  CM.Editor.bakeInto = function (m) {
+    if (!m || !m.data) return;
+    const baked = readBaked(m.id); if (!baked) return;
+    if (!m._origData) m._origData = clone(subset(m.data));
+    if (Array.isArray(baked.landmarks)) m.data.landmarks = baked.landmarks;
+    if (Array.isArray(baked.centers)) m.data.centers = baked.centers;
+    if (Array.isArray(baked.regions)) m.data.regions = baked.regions;
+    if (baked.defaultRegion) m.data.defaultRegion = baked.defaultRegion;
+    if (Array.isArray(baked.facilities)) m.data.facilities = baked.facilities;
   };
   CM.Editor.applyOverrides = function (id) {
     const o = readOv(id); if (!o) return;
@@ -451,9 +519,15 @@
   };
   Editor.prototype._toast = function (txt) { this._hint(txt); clearTimeout(this._toastT); this._toastT = setTimeout(function () { this._hint(''); }.bind(this), 2200); };
 
-  // 载入地图时应用本图保存的编辑
+  // 载入地图时应用本图保存的编辑：先「覆写原始数据」写入 m.data（须在 useMap 的 Object.assign 之前），
+  // 再应用「存到本机」的覆盖层（叠加在覆写之上）
   if (CM.useMap) {
     const orig = CM.useMap;
-    CM.useMap = function (id) { const m = orig(id); try { Editor.applyOverrides(id); } catch (e) { /* ignore */ } return m; };
+    CM.useMap = function (id) {
+      try { Editor.bakeInto(CM.MAPS[id] || CM.MAPS.gz); } catch (e) { /* ignore */ }
+      const m = orig(id);
+      try { Editor.applyOverrides(id); } catch (e) { /* ignore */ }
+      return m;
+    };
   }
 })(window.CM);
