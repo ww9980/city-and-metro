@@ -31,6 +31,13 @@
     },
     // 没有仍在使用的机场类禁建区：伦敦城市机场在地图东部，范围按普通区域处理
     airport: { name: '伦敦城市机场', closeYear: 9999, buildable: 'underground', runway: [ll(51.5040, 0.0400), ll(51.5055, 0.0600)] },
+    // v2 扩展：地图向西扩到希思罗机场（lon0 由 -0.31645 西移至 -0.5004，dx=51）
+    // 希思罗机场（1946 年启用）：主跑道 09L/27R 长约 3.9 km，第二条 09R/27L 位于其南约 1.4 km
+    airport: { name: '希思罗机场', closeYear: 9999, buildable: 'underground', runway: [ll(51.4775, -0.4866), ll(51.4775, -0.4210)] },
+    runways: [
+      { a: ll(51.4648, -0.4866), b: ll(51.4648, -0.4210), from: 1946 },   // 09R/27L
+      { a: ll(51.5048, 0.0400), b: ll(51.5048, 0.0600), from: 1987 },     // 伦敦城市机场 09/27
+    ],
     regions: [
       // 保护林地与大型公园（按 OSM 名称匹配）；open:null 表示永久不开放建设
       { id: 'heath', name: '汉普斯特德荒野', scenic: true, open: null, geo: { park: 'Hampstead Heath' } },
@@ -41,8 +48,10 @@
       { id: 'docklands', name: '狗岛·码头区', poly: isleOfDogs, open: 1981, plan: 'resind', note: '1981 年伦敦码头区开发公司（LDDC）成立，仓库与船坞逐步转为住宅、办公与轻轨（史实）' },
       { id: 'royaldocks', name: '皇家码头（贝克顿·银城）', poly: royalDocks, open: 1995, plan: 'resind', note: '皇家船坞 1981 年起关闭，1990 年代开发为办公、会展与住宅（史实）' },
       { id: 'greenwichpen', name: '格林尼治半岛', poly: poly([[51.4930, -0.0100], [51.4930, 0.0080], [51.4820, 0.0080], [51.4820, -0.0100]]), open: 1997, plan: 'newtown', note: '1997 年起半岛与千禧穹顶（后为 O2）开发（史实）' },
+      // 希思罗机场（v2，地图西缘）：1946 年启用的伦敦主机场，5 座航站楼、两条跑道，用地不开发
+      { id: 'airport', name: '希思罗机场', poly: poly([[51.4840, -0.4960], [51.4840, -0.4150], [51.4550, -0.4150], [51.4550, -0.4960]]), open: 1990, plan: 'res', note: '1946 年启用的伦敦主机场，5 座航站楼、两条跑道；跑道与航站区不开发，范围内只允许地下设站与地下穿越' },
       // 伦敦城市机场（1987 年启用）：继续运营、用地不开发，范围内只允许地下设站与地下穿越
-      { id: 'airport', name: '伦敦城市机场', poly: poly([[51.5090, 0.0380], [51.5090, 0.0640], [51.4990, 0.0640], [51.4990, 0.0380]]), open: 1990, plan: 'res', note: '1987 年启用的城市机场，主要服务码头区与金融城的商务旅客；跑道与航站区不开发' },
+      { id: 'lcy', name: '伦敦城市机场', poly: poly([[51.5090, 0.0380], [51.5090, 0.0640], [51.4990, 0.0640], [51.4990, 0.0380]]), open: 1990, plan: 'res', note: '1987 年启用的城市机场，主要服务码头区与金融城的商务旅客；跑道与航站区不开发' },
       // 内伦敦各区（按 OSM 行政区名匹配）：1990 年已建成
       { id: 'city', name: '伦敦城（金融城）', district: ['City of London'], open: 1990, plan: 'cbd' },
       { id: 'westminster', name: '西敏', district: ['City of Westminster'], open: 1990, plan: 'cbd' },
@@ -70,8 +79,11 @@
       { id: 'redbridge', name: '雷德布里奇（伊尔福德）', district: ['London Borough of Redbridge'], open: 2000, plan: 'res' },
       { id: 'barking', name: '巴金与达格纳姆', district: ['London Borough of Barking and Dagenham'], open: 2000, plan: 'resind' },
       { id: 'bexley', name: '贝克斯利', district: ['London Borough of Bexley'], open: 2000, plan: 'res' },
+      // v2 扩展区（地图西缘）：希灵登与金斯顿，1990 年已建成
+      { id: 'hillingdon', name: '希灵登（海斯·西德雷顿·希思罗）', district: ['London Borough of Hillingdon'], open: 1990, plan: 'resind' },
+      { id: 'kingston', name: '金斯顿（泰晤士畔）', district: ['Royal Borough of Kingston upon Thames'], open: 1990, plan: 'res' },
     ],
-    defaultRegion: { id: 'outer', name: '外围（布罗姆利·哈弗林等）', open: 2005, plan: 'res' },
+    defaultRegion: { id: 'outer', name: '外围（布罗姆利·哈弗林·斯佩尔索恩）', open: 2005, plan: 'res' },
     plans: CM.DATA.plans,
 
     // 1990 年人口与就业中心（估算，人/km²；r 约为影响半径 km）
@@ -187,6 +199,8 @@
     // 枢纽 pax 为市内接驳出行（汽车 + 地铁，到达与离开合计，万人次/日）；其他 w 为占全市同类出行吸引的比例。
     // 地图范围外的希思罗、盖特威克、斯坦斯特德机场不模拟。
     facilities: [
+      { id: 'ld_heathrow', n: '希思罗机场', t: 'air', at: ll(51.4713, -0.4543), pax: [[1990, 42], [2000, 64], [2010, 66], [2019, 80], [2030, 78]], note: '1946 年启用；1990 年代有 4 座航站楼，2008 年 5 号航站楼投用。' },
+      { id: 'ld_lcy', n: '伦敦城市机场', t: 'air', at: ll(51.5048, 0.0492), pax: [[1990, 0.2], [2000, 1.6], [2010, 3], [2019, 5]], note: '1987 年启用，主要服务码头区与金融城的商务旅客。' },
       { id: 'ld_waterloo', n: '滑铁卢车站', t: 'rail', lm: 'ld_waterloo', pax: [[1990, 9], [1994, 10], [2007, 11], [2015, 12], [2030, 12]] },
       { id: 'ld_liverpool', n: '利物浦街车站', t: 'rail', lm: 'ld_liverpool', pax: [[1990, 6.5], [2000, 7], [2015, 8], [2030, 8]] },
       { id: 'ld_victoria', n: '维多利亚车站', t: 'rail', lm: 'ld_victoria', pax: [[1990, 7], [2000, 7.5], [2015, 8], [2030, 8]] },
@@ -375,8 +389,12 @@
   (CM.MAP_LIST = CM.MAP_LIST || []).push({
     id: 'ld', name: '伦敦', title: '伦敦 · 1990', sub: '真实地理 · 1990 年起 · 英镑',
     desc: '从 1990 年的伦敦开始：地铁网已经运营了一百多年，但你接手的只有东部那段被忽视的东伦敦线。码头区正在废墟上重建，金丝雀码头即将崛起，泰晤士河把城市分成两半。路网由你继续规划。',
-    facts: [['范围', '30 km × 24 km'], ['起始', '1990 年'], ['人口', '约 640 万'], ['货币', '英镑（GBP）'], ['既有地铁', '东伦敦线 7 站'], ['模式', '经营挑战 / 自由建造']],
-    modes: ['challenge', 'free'], kind: 'real', mapVersion: 1, scenario: 'ld-1990',
+    facts: [['范围', '43 km × 24 km'], ['起始', '1990 年'], ['人口', '约 640 万'], ['货币', '英镑（GBP）'], ['既有地铁', '东伦敦线 7 站'], ['模式', '经营挑战 / 自由建造']],
+    modes: ['challenge', 'free'], kind: 'real', mapVersion: 2,
+    // v1→v2：地图向西扩大到希思罗机场（lon0 由 -0.31645 西移到 -0.5004，原有内容整体右移 51 格），向东保持到巴金与泰晤士米德
+    extent: { from: 1, dx: 52, dy: 0, oldW: 120, oldH: 96, newW: 172, newH: 96, note: '地图向西扩大到希思罗机场与豪恩斯洛、费尔瑟姆一带',
+      oldRegionIds: ['heath', 'richmondpk', 'wimbledon', 'canarywharf', 'docklands', 'royaldocks', 'greenwichpen', 'airport', 'city', 'westminster', 'camden', 'islington', 'hackney', 'towerhamlets', 'southwark', 'lambeth', 'kensington', 'hammersmith', 'wandsworth', 'lewisham', 'greenwich', 'newham', 'brent', 'ealing', 'hounslow', 'richmond', 'merton', 'walthamforest', 'haringey', 'croydon', 'redbridge', 'barking', 'bexley', 'outer'],
+      oldLandmarkIds: ['ld_tower', 'ld_stpauls', 'ld_abbey', 'ld_palace', 'ld_bigben', 'ld_buckingham', 'ld_british', 'ld_ngallery', 'ld_covent', 'ld_nhm', 'ld_vam', 'ld_albert', 'ld_stpancras', 'ld_kingscross', 'ld_waterloo', 'ld_liverpool', 'ld_paddington', 'ld_victoria', 'ld_londonbridge', 'ld_lloyds', 'ld_barbican', 'ld_festival', 'ld_national', 'ld_onecanada', 'ld_hsbc', 'ld_gherkin', 'ld_shard', 'ld_eye', 'ld_tate', 'ld_tatebritain', 'ld_iwm', 'ld_battersea', 'ld_o2', 'ld_olympic', 'ld_wembley', 'ld_observatory', 'ld_naval', 'ld_alexandra', 'ld_museumdock', 'ld_greenwichuni'] }, scenario: 'ld-1990',
     region: '英国', tagline: '接管东伦敦线，重建码头区', difficulty: 4, tags: ['已有地铁', '过河', '再开发'],
     intro: '1990 年的伦敦正处在转折点：撒切尔时代进入尾声，码头的仓库与船坞正在变成写字楼与公寓。地铁网已有 127 年历史，但东部只有一条 7 站的小线；过河要靠桥梁，高峰时内环道路几乎瘫痪。你要用这条线把金丝雀码头、皇家码头与斯特拉特福接进城市，再面对奥运与横贯铁路带来的新需求。',
     features: [['train', '既有东伦敦线', '开局接管肖迪奇—新十字门 7 站，不收历史建设费'], ['bridge', '泰晤士河与码头', '河面宽阔，过河要建隧道或桥梁，码头区水道交错'], ['building', '码头区再开发', '狗岛、皇家码头、格林尼治半岛按年份开放，金丝雀码头 1991 年崛起'], ['coin', '英镑经营', '造价、票价、拨款与债券按英镑计算，1990 年代利率较高']],
@@ -384,7 +402,7 @@
     geo: G, data: data,
     econ: { devOffset: 25, money: 8.5 },   // 出行选择参数：伦敦 1990 年约对应广州样本 2015 年的发展阶段；时间价值等按英镑换算
     cfg: {
-      W: 120, H: 96, START: { y: 1990, m: 1, d: 1, minute: 360 },
+      W: 172, H: 96, START: { y: 1990, m: 1, d: 1, minute: 360 },
       // 工作周：英国长期实行五天工作周（史实）
       workWeek: { sat: [[1990, 0]], school: [[1990, 0]] },
       growth: Object.assign({}, CM.CFG.growth, { popCurve: [[1990, 6.1e6], [1995, 6.2e6], [2000, 6.8e6], [2005, 7.2e6], [2010, 7.8e6], [2015, 8.5e6], [2020, 8.9e6], [2030, 9.4e6], [2050, 9.9e6], [2300, 10.2e6]], histEnd: 2020, jobsRatio: [[1990, 0.55], [2000, 0.6], [2020, 0.63], [2040, 0.64]] }),
@@ -421,6 +439,6 @@
         ],
       },
     },
-    cam: { cx: 62, cy: 44, zoom: 18 },
+    cam: { cx: 112, cy: 44, zoom: 17 },
   });
 })(window.CM);

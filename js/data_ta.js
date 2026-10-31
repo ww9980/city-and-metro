@@ -12,7 +12,7 @@
 
   // 泰山风景名胜区：山体主体（近似，北侧到图边）；南界沿环山路，山体不越过环山路进入城区
   const taishan = poly([
-    [36.2630, 116.9910], [36.2630, 117.1690], [36.2291, 117.1690],
+    [36.3000, 116.9400], [36.3000, 117.1690], [36.2291, 117.1690],
     [36.2275, 117.1615], [36.2263, 117.1570], [36.2190, 117.1505],
     [36.2169, 117.1465], [36.2094, 117.1406], [36.2049, 117.1293],
     [36.2073, 117.1193], [36.2060, 117.1028], [36.2049, 117.0963],
@@ -49,6 +49,10 @@
       { id: 'taishanq', name: '泰山区（青年路·东岳大街）', district: ['泰山区'], open: 2000, plan: 'mix' },
       { id: 'daiyue', name: '岱岳区（西部·南部）', district: ['岱岳区'], open: 2000, plan: 'res' },
       { id: 'highzone', name: '泰安高新区', poly: poly([[36.1750, 117.0700], [36.1750, 117.0000], [36.1550, 117.0000], [36.1550, 117.0700]]), open: 2005, plan: 'mix' },
+      // v3 扩展区：西部高铁新区与天平湖、东部上高·省庄、泰山北麓的桃花峪与玉泉寺
+      { id: 'hsrnew', name: '高铁新区（泰安站周边）', poly: poly([[36.2000, 116.9400], [36.2000, 117.0100], [36.1600, 117.0100], [36.1600, 116.9400]]), open: 2011, plan: 'newtown', note: '2011 年京沪高铁泰安站启用后围绕车站建设的新区（史实）' },
+      { id: 'tianping', name: '天平湖（大河水库）', poly: poly([[36.2200, 116.9500], [36.2200, 117.0000], [36.1950, 117.0000], [36.1950, 116.9500]]), open: 2005, plan: 'newtown', note: '1958 年建成的大河水库，2000 年代起开发为天平湖旅游度假区' },
+      { id: 'shanggao', name: '东部（上高·省庄）', poly: poly([[36.2100, 117.1500], [36.2100, 117.2400], [36.1300, 117.2400], [36.1300, 117.1500]]), open: 2005, plan: 'resind', note: '泰安东部的居住与产业拓展区' },
     ],
     defaultRegion: { id: 'outer', name: '外围（山北·汶河以南）', open: 2008, plan: 'res' },
     plans: CM.DATA.plans,
@@ -62,6 +66,10 @@
       at(36.1750, 117.0800, { pop: 14000, jobs: 6000, r: 1.1 }),    // 高新区
       at(36.1700, 117.1200, { pop: 12000, jobs: 4000, r: 1.2 }),    // 南部居住区
       at(36.1900, 117.0600, { pop: 12000, jobs: 4000, r: 1.2 }),    // 西部（天平湖）
+      at(36.2050, 116.9850, { pop: 6000, jobs: 3000, r: 1.4 }),     // 天平湖、大河
+      at(36.1800, 117.0250, { pop: 5000, jobs: 6000, r: 1.3 }),     // 高铁新区
+      at(36.1700, 117.1800, { pop: 12000, jobs: 5000, r: 1.4 }),    // 上高、省庄
+      at(36.1500, 117.1500, { pop: 8000, jobs: 3000, r: 1.4 }),     // 天颐湖、南部新区
     ],
     rural: { pop: 400, jobs: 100 },
     roadYears: {
@@ -86,6 +94,17 @@
       Object.assign(at(36.2039, 117.0639), { id: 'ta_stadium', name: '泰安市体育中心', w: 260, d: 220, year: 1995, kind: 'stadium' }),
       Object.assign(at(36.1769, 117.0294), { id: 'ta_hsstation', name: '泰安站（高铁）', w: 300, d: 200, year: 2011, kind: 'rail' }),
       Object.assign(at(36.2244, 117.0321), { id: 'ta_taishanxueyuan', name: '泰山学院', w: 400, d: 300, year: 2002, kind: 'campus' }),
+      // v3 扩展区：中天门（此前缺失，被设施引用）、桃花峪、玉泉寺、黑龙潭、天平湖与大汶口遗址
+      Object.assign(at(36.2385, 117.1095), { id: 'ta_zhongtianmen', name: '中天门', w: 100, d: 80, year: 1264, kind: 'traditional', h: 847 }),
+      Object.assign(at(36.2620, 116.9800), { id: 'ta_taohuayu', name: '桃花峪', w: 140, d: 110, year: 1900, kind: 'traditional' }),
+      Object.assign(at(36.2760, 116.9950), { id: 'ta_yuquansi', name: '玉泉寺', w: 120, d: 90, year: 520, kind: 'temple' }),
+      Object.assign(at(36.2130, 117.0500), { id: 'ta_heilongtan', name: '黑龙潭', w: 200, d: 160, year: 1900, kind: 'open' }),
+      Object.assign(at(36.2080, 117.0900), { id: 'ta_fengyuxiang', name: '冯玉祥墓', w: 150, d: 120, year: 1953, kind: 'memorial' }),
+      Object.assign(at(36.2050, 116.9750), { id: 'ta_tianping', name: '天平湖', w: 1200, d: 900, year: 1958, kind: 'open' }),
+      Object.assign(at(36.1350, 117.0950), { id: 'ta_dawenkou', name: '大汶口遗址', w: 400, d: 300, year: -3500, kind: 'memorial' }),
+      Object.assign(at(36.1880, 117.1200), { id: 'ta_laojie', name: '泰安老街', w: 300, d: 240, year: 2015, kind: 'box' }),
+      Object.assign(at(36.1550, 117.1500), { id: 'ta_tianyihu', name: '天颐湖', w: 900, d: 700, year: 2005, kind: 'open' }),
+      Object.assign(at(36.1700, 117.0250), { id: 'ta_hsrplaza', name: '泰安站广场', w: 300, d: 220, year: 2011, kind: 'box' }),
     ],
     facilities: [
       { id: 'ta_rail', n: '泰山站', t: 'rail', lm: 'ta_station', pax: [[2000, 1.2], [2011, 0.9], [2020, 1.0], [2030, 1.1]] },
@@ -110,6 +129,22 @@
       { id: 'ta_sihai', n: '四海商城', t: 'shop', at: ll(36.1840, 117.1050), w: 0.02, note: '1996 年 1 月 28 日开业，存续 18 年。' },
       { id: 'ta_stadium', n: '泰安市体育中心', t: 'stadium', lm: 'ta_stadium', w: 0.008 },
       { id: 'ta_taishan', n: '泰山风景名胜区', t: 'park', at: ll(36.2300, 117.1080), r: 2.0, w: 0.03 },
+      // v3 扩展区：西部高铁新区、天平湖与东部新区
+      { id: 'ta_taohuayu', n: '桃花峪（西麓登山口）', t: 'scenic', lm: 'ta_taohuayu', w: 0.012 },
+      { id: 'ta_yuquansi', n: '玉泉寺', t: 'scenic', lm: 'ta_yuquansi', w: 0.006 },
+      { id: 'ta_heilongtan', n: '黑龙潭', t: 'scenic', lm: 'ta_heilongtan', w: 0.008 },
+      { id: 'ta_fengyuxiang', n: '冯玉祥墓', t: 'scenic', lm: 'ta_fengyuxiang', w: 0.005 },
+      { id: 'ta_tianping', n: '天平湖旅游度假区', t: 'park', lm: 'ta_tianping', w: [[2000, 0.004], [2010, 0.012]] },
+      { id: 'ta_tianyihu', n: '天颐湖', t: 'park', lm: 'ta_tianyihu', w: [[2000, 0], [2008, 0.01]] },
+      { id: 'ta_dawenkou', n: '大汶口遗址', t: 'scenic', lm: 'ta_dawenkou', w: 0.006 },
+      { id: 'ta_laojie', n: '泰安老街', t: 'venue', lm: 'ta_laojie', w: [[2000, 0], [2015, 0.012]] },
+      { id: 'ta_hsr_cbd', n: '高铁新区商务区', t: 'cbd', at: ll(36.1800, 117.0250), y0: 2012, w: [[2012, 0.004], [2025, 0.016]] },
+      { id: 'ta_hsr_shop', n: '高铁站前商圈', t: 'shop', at: ll(36.1790, 117.0300), y0: 2013, w: 0.014 },
+      { id: 'ta_glassfiber', n: '泰山玻璃纤维（玻纤工业园）', t: 'venue', at: ll(36.1650, 117.0400), y0: 2002, w: 0.014 },
+      { id: 'ta_taikai', n: '泰开电气集团', t: 'venue', at: ll(36.1580, 117.0600), w: 0.012 },
+      { id: 'ta_gypsum', n: '泰山石膏（建材）', t: 'venue', at: ll(36.1500, 117.0800), w: 0.008 },
+      { id: 'ta_zyy', n: '泰安市中医医院', t: 'hosp', at: ll(36.1900, 117.1150), w: 0.026 },
+      { id: 'ta_tshospital', n: '泰安市泰山医学院附属医院', t: 'hosp', at: ll(36.1820, 117.1250), w: 0.022 },
     ],
     districtLabels: [['泰山', ['泰山区']], ['岱岳', ['岱岳区']]],
     events: [
@@ -169,28 +204,62 @@
       goals: [{ id: 'ta-g2', from: 2007, type: 'connect', months: 60, reward: 25000, title: '高新区接驳', desc: '高新区的工厂与园区开始招工，职工多住在老城与东岳大街沿线。用地铁把青年路商圈与高新区连起来。', anchors: [site('青年路商圈', 3), site('山东科技大学', 4)] }] },
     { id: 'ta-e3', from: 2011, name: '高铁与旅游期', tag: '史实',
       summary: '史实：2011 年 6 月京沪高铁通车，泰安站启用，从北京、上海到泰山的时间大幅缩短。估算：高铁站周边与西部新区开始建设，旅游客流明显增长，节假日的老城与登山入口压力更大。',
-      grow: { pop: { daiyue: 1.35, highzone: 1.4, taishanq: 1.1, oldcity: 0.88 }, jobs: { highzone: 1.5, daiyue: 1.3, taishanq: 1.2, oldcity: 1.0 } },
+      grow: { pop: { daiyue: 1.35, highzone: 1.4, hsrnew: 1.8, tianping: 1.5, shanggao: 1.3, taishanq: 1.1, oldcity: 0.88 }, jobs: { highzone: 1.5, daiyue: 1.3, hsrnew: 1.6, shanggao: 1.2, taishanq: 1.2, oldcity: 1.0 } },
       demand: { decayHW: 1.05, lz: 1.15, hub: 1.15 },
       corridors: [{ a: 'daiyue', b: 'oldcity', f: 1.2 }, { a: 'highzone', b: 'oldcity', f: 1.15 }],
       goals: [{ id: 'ta-g3', from: 2011, type: 'connect', months: 60, reward: 30000, title: '高铁站进城', desc: '京沪高铁泰安站启用后，旅客需要进城。用地铁把泰安站与东岳大街的商务区连起来。', anchors: [site('泰安站（高铁）', 4), site('泰安商务区（东岳大街）', 3)] }] },
     { id: 'ta-e4', from: 2020, name: '新城开发期', tag: '史实',
       summary: '史实：2020 年前后泰安继续向西、向东扩展，高铁片区与高新区成为新的建设重点。估算：老城人口基本稳定，西部新城与高新区吸纳新增人口，旅游与休闲出行占比继续提高。',
-      grow: { pop: { daiyue: 1.35, highzone: 1.35, taishanq: 1.05, oldcity: 0.9 }, jobs: { daiyue: 1.35, highzone: 1.35, taishanq: 1.15, oldcity: 1.0 } },
+      grow: { pop: { daiyue: 1.35, highzone: 1.35, hsrnew: 1.6, tianping: 1.4, shanggao: 1.35, taishanq: 1.05, oldcity: 0.9 }, jobs: { daiyue: 1.35, highzone: 1.35, hsrnew: 1.5, shanggao: 1.25, taishanq: 1.15, oldcity: 1.0 } },
       demand: { hw: 1.02, decayHW: 1.1, lz: 1.15, hub: 1.1 },
       corridors: [{ a: 'daiyue', b: 'taishanq', f: 1.2 }, { a: 'highzone', b: 'taishanq', f: 1.1 }],
       goals: [{ id: 'ta-g4', from: 2020, type: 'connect', months: 60, reward: 35000, title: '高铁站到登山口', desc: '高铁客流与登山客流在同一座城市里交汇。用地铁把泰安站与红门连起来。', anchors: [site('泰安站（高铁）', 4), site('红门', 3)] }] },
     { id: 'ta-e5', from: 2021, name: '模拟未来', tag: '模拟',
       summary: '模拟：此后的发展按模型推演，不代表真实历史。估算：西部新城与高新区继续成长，老城保持稳定，旅游客流随城市名气提高。',
-      grow: { pop: { daiyue: 1.25, highzone: 1.25, taishanq: 1.05, oldcity: 0.92 }, jobs: { daiyue: 1.25, highzone: 1.25, taishanq: 1.1 } },
+      grow: { pop: { daiyue: 1.25, highzone: 1.25, hsrnew: 1.4, tianping: 1.3, shanggao: 1.3, taishanq: 1.05, oldcity: 0.92 }, jobs: { daiyue: 1.25, highzone: 1.25, hsrnew: 1.35, shanggao: 1.2, taishanq: 1.1 } },
       demand: { lz: 1.1, decayHW: 1.05 }, corridors: [{ a: 'daiyue', b: 'taishanq', f: 1.1 }] },
   ];
 
   const INF = [[2000, 0.004], [2004, 0.039], [2008, 0.059], [2012, 0.026], [2016, 0.02], [2020, 0.025], [2030, 0.02], [2050, 0.02]];
+  // 第 1 版存档的旧修正：泰山风景区南界改为沿环山路，原 HILL 格中已不在景区内的恢复为 RURAL（只在旧 64×56 格网上有效）
+  const legacyHillFix = function (payload) {
+      var W = 64, H = 56, N = W * H, lu = payload.city && payload.city.lu;
+      if (!lu || !lu.b || lu.b.length !== N) return;
+      var Pr = (G && G.proj) || { lon0: 116.991, lat0: 36.2629, kx: 359.4, ky: 445.28 };
+      var cv = function (lat, lon) { return [(lon - Pr.lon0) * Pr.kx, (Pr.lat0 - lat) * Pr.ky]; };
+      var pts = [
+        [36.2630, 116.9910], [36.2630, 117.1690], [36.2291, 117.1690],
+        [36.2275, 117.1615], [36.2263, 117.1570], [36.2190, 117.1505],
+        [36.2169, 117.1465], [36.2094, 117.1406], [36.2049, 117.1293],
+        [36.2073, 117.1193], [36.2060, 117.1028], [36.2049, 117.0963],
+        [36.2039, 117.0823], [36.2062, 117.0727], [36.2094, 117.0670],
+        [36.2146, 117.0532], [36.2169, 117.0464], [36.2235, 117.0352],
+        [36.2324, 117.0233], [36.2374, 117.0131], [36.2518, 117.0039],
+      ].map(function (p) { return cv(p[0], p[1]); });
+      var m = pts.length;
+      for (var c = 0; c < N; c++) {
+        if (lu.b[c] !== 8) continue;  // LU.HILL
+        var i = c % W, j = (c / W) | 0, px = i + 0.5, py = j + 0.5, inside = false;
+        for (var k = 0, l = m - 1; k < m; l = k++) {
+          var xk = pts[k][0], yk = pts[k][1], xl = pts[l][0], yl = pts[l][1];
+          if ((yk > py) !== (yl > py) && px < (xl - xk) * (py - yk) / (yl - yk) + xk) inside = !inside;
+        }
+        if (!inside) lu.b[c] = 0;  // LU.RURAL
+      }
+  };
+
+  // 范围扩展规格单独提出来：migrate 需要在旧版山体修正之后再走一次范围迁移
+  const TA_EXTENT = { from: 2, dx: 20, dy: 16, oldW: 64, oldH: 56, newW: 112, newH: 84, note: '地图向西扩大到天平湖与京沪高铁泰安站，向东到上高·省庄，向北到泰山北麓',
+      oldRegionIds: ['taishan', 'oldcity', 'taishanq', 'daiyue', 'highzone', 'outer'],
+      oldLandmarkIds: ['ta_daimiao', 'ta_hongmen', 'ta_nantianmen', 'ta_yuhuang', 'ta_tianwaicun', 'ta_station', 'ta_sdau', 'ta_tsmc', 'ta_puzhaosi', 'ta_wangmuchi', 'ta_stadium', 'ta_hsstation', 'ta_taishanxueyuan'] };
+
   (CM.MAP_LIST = CM.MAP_LIST || []).push({
     id: 'ta', name: '泰安', title: '泰安 · 2000', sub: '真实地理 · 2000 年起 · 人民币',
     desc: '从 2000 年的泰安开始：泰山在北，城市在南，岱庙到红门是老城最热闹的一段。城市不大，但登山客流与市民通勤都压在几条路上。你要用一条小规模的轨道网，把山门、车站与新区连起来。',
-    facts: [['范围', '16 km × 14 km'], ['起始', '2000 年'], ['人口', '约 60 万'], ['货币', '人民币（CNY）'], ['模式', '经营挑战 / 自由建造']],
-    modes: ['challenge', 'free'], kind: 'real', mapVersion: 2, scenario: 'ta-2000',
+    facts: [['范围', '28 km × 21 km'], ['起始', '2000 年'], ['人口', '约 75 万'], ['货币', '人民币（CNY）'], ['模式', '经营挑战 / 自由建造']],
+    modes: ['challenge', 'free'], kind: 'real', mapVersion: 3,
+    // v2→v3：格网由 64×56 扩到 112×84，向西纳入天平湖与高铁新区、向东到上高·省庄、向北到泰山北麓
+    extent: TA_EXTENT, scenario: 'ta-2000',
     region: '中国内地', tagline: '泰山脚下的山城', difficulty: 1, tags: ['无地铁开局', '山地', '旅游城市'],
     intro: '2000 年的泰安是一座山脚下的小城：泰山在北，城区沿山脚展开，岱庙、红门与天外村是三条登山入口。城市没有地铁，公交线路沿东岳大街与青年路集中。你要在最少的线路上，同时照顾市民通勤与一年几百万的登山客流。',
     features: [['mountain', '泰山不可开发', '山体与风景名胜区限制选线，只能绕行或地下穿越'], ['building', '山城格局', '老城沿山脚展开，岱庙与红门是受保护的历史片区'], ['train', '高铁接驳', '2011 年京沪高铁泰安站在城西，需要新的接驳走廊'], ['coin', '人民币经营', '城市规模小，资金与客流都紧，早期线路必须精打细算']],
@@ -198,8 +267,8 @@
     geo: G, data: data,
     econ: { devOffset: 0, money: 1 },
     cfg: {
-      W: 64, H: 56, START: { y: 2000, m: 1, d: 1, minute: 360 },
-      growth: Object.assign({}, CM.CFG.growth, { popCurve: [[2000, 6.0e5], [2005, 6.8e5], [2010, 7.5e5], [2015, 8.2e5], [2020, 9.0e5], [2030, 9.6e5], [2050, 1.0e6], [2300, 1.05e6]], histEnd: 2020, jobsRatio: [[2000, 0.48], [2010, 0.52], [2020, 0.55], [2040, 0.56]] }),
+      W: 112, H: 84, START: { y: 2000, m: 1, d: 1, minute: 360 },
+      growth: Object.assign({}, CM.CFG.growth, { popCurve: [[2000, 7.5e5], [2005, 8.2e5], [2010, 8.9e5], [2015, 9.6e5], [2020, 1.03e6], [2030, 1.1e6], [2050, 1.15e6], [2300, 1.2e6]], histEnd: 2020, jobsRatio: [[2000, 0.48], [2010, 0.52], [2020, 0.55], [2040, 0.56]] }),
       money: { code: 'CNY', unit: '元', wan: '万元', yi: '亿元', sym: '¥' },
       econBase: 2000,
       cost: Object.assign({}, CM.CFG.cost, {
@@ -232,33 +301,12 @@
         ],
       },
     },
-    cam: { cx: 32, cy: 30, zoom: 20 },
+    cam: { cx: 56, cy: 52, zoom: 16 },
     // v1→v2：泰山风景区南界改为沿环山路（不再越过环山路进入城区），原 HILL 格中已不在新景区范围内的恢复为 RURAL
     migrate: function (payload, from) {
-      if (from >= 2) return;
-      var W = 64, H = 56, N = W * H, lu = payload.city && payload.city.lu;
-      if (!lu || !lu.b || lu.b.length !== N) return;
-      var Pr = (G && G.proj) || { lon0: 116.991, lat0: 36.2629, kx: 359.4, ky: 445.28 };
-      var cv = function (lat, lon) { return [(lon - Pr.lon0) * Pr.kx, (Pr.lat0 - lat) * Pr.ky]; };
-      var pts = [
-        [36.2630, 116.9910], [36.2630, 117.1690], [36.2291, 117.1690],
-        [36.2275, 117.1615], [36.2263, 117.1570], [36.2190, 117.1505],
-        [36.2169, 117.1465], [36.2094, 117.1406], [36.2049, 117.1293],
-        [36.2073, 117.1193], [36.2060, 117.1028], [36.2049, 117.0963],
-        [36.2039, 117.0823], [36.2062, 117.0727], [36.2094, 117.0670],
-        [36.2146, 117.0532], [36.2169, 117.0464], [36.2235, 117.0352],
-        [36.2324, 117.0233], [36.2374, 117.0131], [36.2518, 117.0039],
-      ].map(function (p) { return cv(p[0], p[1]); });
-      var m = pts.length;
-      for (var c = 0; c < N; c++) {
-        if (lu.b[c] !== 8) continue;  // LU.HILL
-        var i = c % W, j = (c / W) | 0, px = i + 0.5, py = j + 0.5, inside = false;
-        for (var k = 0, l = m - 1; k < m; l = k++) {
-          var xk = pts[k][0], yk = pts[k][1], xl = pts[l][0], yl = pts[l][1];
-          if ((yk > py) !== (yl > py) && px < (xl - xk) * (py - yk) / (yl - yk) + xk) inside = !inside;
-        }
-        if (!inside) lu.b[c] = 0;  // LU.RURAL
-      }
+      // 先做第 1 版的旧修正（山体南界改沿环山路，只在旧 64×56 格网上有效），再走第 2→3 版的范围扩展
+      if (from < 2) legacyHillFix(payload);
+      return CM.extentMigration(TA_EXTENT)(payload, 2);
     },
   });
 })(window.CM);

@@ -18,7 +18,7 @@ for (const [, src] of (await readFile(path.join(root, 'index.html'), 'utf8')).ma
   if (src === 'js/save.js') break;
 }
 const C = context.CM;
-const CUSTOM = { ld: 1990, jn: 2000, qd: 2000, ta: 2000 };
+const CUSTOM = { ld: 1990, st: 1990, ta: 2000, qd: 2000, bs: 1960, lv: 2000, mc: 2000 };
 
 for (const id of Object.keys(CUSTOM)) {
   const m = C.MAPS[id];
@@ -83,4 +83,4 @@ for (const id of Object.keys(CUSTOM)) {
     assert.equal(game.eraBase.id, C.Eras.current(game.clock.y).id, id + ': 阶段基准未更新');
   }
 }
-console.log('PASS custom maps: ld / jn / qd / ta registration, bounds, eras, settlement and save round trip');
+console.log('PASS custom maps: ' + Object.keys(CUSTOM).join(' / ') + ' registration, bounds, eras, settlement and save round trip');

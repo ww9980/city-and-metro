@@ -33,17 +33,24 @@
       ['模拟', 'sim', '2020 年之后的发展、居民出行选择、道路拥堵、客流与财政结果；真实的后续地铁线路不会自动出现。'],
       ['', '', '模拟结果不得作为真实青岛交通规划预测。'],
     ],
-    airport: null,
+    // 流亭机场（1944 年启用，2021 年 8 月转场胶东国际机场）：跑道 17/35，长约 3.4 km
+    airport: { name: '青岛流亭机场', closeYear: 2021, buildable: 'underground', runway: [ll(36.2830, 120.3720), ll(36.2520, 120.3760)] },
+    runways: [],
     regions: [
+      { id: 'airport', name: '流亭机场（已转场）', poly: poly([[36.2460, 120.3550], [36.2460, 120.3930], [36.2860, 120.3930], [36.2860, 120.3550]]), open: 2000, plan: 'res', note: '1944 年启用的军民合用机场，2021 年 8 月民航转场胶东国际机场；范围内可以地下设站与地下穿越' },
       { id: 'laoshan', name: '崂山风景区', scenic: true, open: null, poly: poly([[36.1498, 120.4200], [36.1498, 120.4745], [36.0900, 120.4745], [36.0900, 120.4200]]) },
+      { id: 'gaoxin', name: '红岛高新区（胶州湾北岸）', poly: poly([[36.1950, 120.2250], [36.1950, 120.2900], [36.2450, 120.2900], [36.2450, 120.2250]]), open: 2008, plan: 'newtown', note: '2008 年起在胶州湾北岸盐田上建设的红岛高新区（史实）' },
+      { id: 'xihai', name: '西海岸新区（黄岛·唐岛湾）', poly: poly([[35.9500, 120.1500], [35.9500, 120.2700], [35.9900, 120.2700], [35.9900, 120.1500]]), open: 2011, plan: 'newtown', note: '2011 年桥隧通车后大规模开发，2014 年设立西海岸新区（史实）' },
       { id: 'oldtown', name: '老城（市南西部·栈桥）', poly: oldtown, open: 2000, plan: 'oldmix' },
       { id: 'fushanhou', name: '浮山后·燕儿岛', poly: fushanhou, open: 2000, plan: 'newtown' },
       { id: 'shinan', name: '市南区（香港中路·湛山）', district: ['市南区'], open: 2000, plan: 'cbd' },
       { id: 'shibei', name: '市北区（台东·四方）', district: ['市北区'], open: 2000, plan: 'mix' },
       { id: 'licang', name: '李沧区（沧口·李村）', district: ['李沧区'], open: 2000, plan: 'resind' },
       { id: 'laoshanq', name: '崂山区（沙子口·高科技园）', district: ['崂山区'], open: 2000, plan: 'resind' },
+      { id: 'chengyang', name: '城阳区（城阳·流亭·棘洪滩）', district: ['城阳区'], open: 2000, plan: 'resind' },
+      { id: 'huangdao', name: '黄岛区（前湾港·辛安·薛家岛）', district: ['黄岛区'], open: 2000, plan: 'resind' },
     ],
-    defaultRegion: { id: 'outer', name: '外围（胶州湾北部·山地）', open: 2008, plan: 'res' },
+    defaultRegion: { id: 'outer', name: '外围（胶州湾水面·山地）', open: 2008, plan: 'res' },
     plans: CM.DATA.plans,
 
     centers: [
@@ -59,6 +66,12 @@
       at(36.1000, 120.4300, { pop: 12000, jobs: 6000, r: 1.4 }),    // 崂山（高科园）
       at(36.1100, 120.4400, { pop: 8000, jobs: 3000, r: 1.2 }),     // 沙子口
       at(36.1350, 120.3700, { pop: 14000, jobs: 4000, r: 1.3 }),    // 城阳南
+      at(36.2900, 120.3900, { pop: 18000, jobs: 9000, r: 1.4 }),    // 城阳城区
+      at(36.2650, 120.3750, { pop: 8000, jobs: 5000, r: 1.2 }),     // 流亭、机场
+      at(36.2200, 120.2550, { pop: 6000, jobs: 7000, r: 1.5 }),     // 红岛高新区
+      at(36.0200, 120.2300, { pop: 9000, jobs: 18000, r: 1.6 }),    // 前湾港
+      at(35.9650, 120.1900, { pop: 22000, jobs: 9000, r: 1.5 }),    // 黄岛、唐岛湾
+      at(36.0000, 120.2500, { pop: 12000, jobs: 6000, r: 1.4 }),    // 辛安、薛家岛
     ],
     rural: { pop: 400, jobs: 100 },
     roadYears: {
@@ -93,6 +106,15 @@
       Object.assign(at(36.0870, 120.4400), { id: 'qd_shilaoren', name: '石老人', w: 100, d: 80, year: 1900, kind: 'tower', h: 17 }),
       Object.assign(at(36.1470, 120.3800), { id: 'qd_northstation', name: '青岛北站', w: 400, d: 260, year: 2014, kind: 'rail' }),
       Object.assign(at(36.1420, 120.4300), { id: 'qd_laoshan', name: '崂山（巨峰）', w: 600, d: 500, year: 1900, kind: 'temple', h: 300 }),
+      // v2 扩展区：城阳、流亭、红岛与西海岸
+      Object.assign(at(36.2900, 120.3900), { id: 'qd_chengyang', name: '城阳城区', w: 400, d: 320, year: 1900, kind: 'box' }),
+      Object.assign(at(36.2680, 120.3740), { id: 'qd_liuting', name: '流亭机场', w: 900, d: 700, year: 1944, kind: 'box' }),
+      Object.assign(at(36.2200, 120.2550), { id: 'qd_hongdao', name: '红岛盐田', w: 1200, d: 900, year: 1900, kind: 'box' }),
+      Object.assign(at(36.0200, 120.2300), { id: 'qd_qianwan', name: '前湾港', w: 1400, d: 700, year: 1990, kind: 'box' }),
+      Object.assign(at(35.9600, 120.1900), { id: 'qd_jinshatan', name: '金沙滩', w: 900, d: 200, year: 1985, kind: 'open' }),
+      Object.assign(at(35.9700, 120.2100), { id: 'qd_xihai', name: '西海岸新区（唐岛湾）', w: 900, d: 700, year: 2014, kind: 'boom' }),
+      Object.assign(at(36.0100, 120.2400), { id: 'qd_qingdao_port_w', name: '青岛港（前湾港区）', w: 900, d: 600, year: 1990, kind: 'box' }),
+      Object.assign(at(36.0500, 120.2900), { id: 'qd_tuandao', name: '团岛灯塔', w: 60, d: 50, year: 1900, kind: 'tower', h: 15 }),
     ],
 
     facilities: [
@@ -120,9 +142,24 @@
       { id: 'qd_zhongshanpark', n: '中山公园', t: 'park', at: ll(36.0600, 120.3400), r: 0.8, w: 0.012 },
       { id: 'qd_wusi', n: '五四广场', t: 'park', lm: 'qd_wusi', w: 0.015 },
       { id: 'qd_olympic', n: '奥帆中心', t: 'venue', lm: 'qd_sailing', w: [[2000, 0], [2008, 0.012]] },
+      // v2 扩展区
+      { id: 'qd_airport', n: '青岛流亭机场', t: 'air', at: ll(36.2680, 120.3740), y1: 2021, pax: [[2000, 2.8], [2008, 8], [2015, 14], [2019, 25.6]], note: '1944 年启用，2021 年 8 月民航转场胶东国际机场。' },
+      { id: 'qd_chengyangst', n: '城阳站', t: 'rail', at: ll(36.2900, 120.3850), pax: [[2000, 0.5], [2010, 1.2], [2020, 2]] },
+      { id: 'qd_xihaist', n: '青岛西站（黄岛）', t: 'rail', at: ll(35.9700, 120.2300), pax: [[2018, 1.8], [2030, 3]], note: '2018 年随青连铁路启用。' },
+      { id: 'qd_cy_shop', n: '城阳商圈', t: 'shop', at: ll(36.2900, 120.3900), w: [[2000, 0.012], [2015, 0.022]] },
+      { id: 'qd_xh_shop', n: '西海岸商圈（唐岛湾）', t: 'shop', at: ll(35.9680, 120.1950), y0: 2012, w: 0.022 },
+      { id: 'qd_xh_cbd', n: '西海岸商务区', t: 'cbd', at: ll(35.9650, 120.2050), y0: 2014, w: 0.016 },
+      { id: 'qd_hongdao_cbd', n: '红岛高新区商务区', t: 'cbd', at: ll(36.2200, 120.2600), y0: 2012, w: 0.008 },
+      { id: 'qd_qianwan_port', n: '青岛港前湾港区', t: 'venue', lm: 'qd_qianwan', w: [[2000, 0.014], [2010, 0.022]] },
+      { id: 'qd_jinshatan', n: '金沙滩', t: 'scenic', lm: 'qd_jinshatan', w: [[2000, 0.006], [2012, 0.014]] },
+      { id: 'qd_tangdaowan', n: '唐岛湾公园', t: 'park', at: ll(35.9620, 120.2000), y0: 2008, w: 0.01 },
+      { id: 'qd_laoshanbei', n: '崂山北九水', t: 'scenic', at: ll(36.2000, 120.4600), w: 0.014 },
+      { id: 'qd_auto', n: '青岛汽车产业新城', t: 'venue', at: ll(36.2600, 120.4400), y0: 2010, w: 0.012 },
+      { id: 'qd_haier', n: '海尔工业园', t: 'venue', at: ll(36.1700, 120.4300), w: 0.016 },
+      { id: 'qd_hisense', n: '海信信息产业园', t: 'venue', at: ll(36.1000, 120.4300), y0: 2005, w: 0.012 },
     ],
 
-    districtLabels: [['市南', ['市南区']], ['市北', ['市北区']], ['李沧', ['李沧区']], ['崂山', ['崂山区']]],
+    districtLabels: [['市南', ['市南区']], ['市北', ['市北区']], ['李沧', ['李沧区']], ['崂山', ['崂山区']], ['城阳', ['城阳区']], ['黄岛', ['黄岛区']]],
 
     events: [
       { y: 2000, m: 1, tag: '史实', title: '2000 年的青岛', desc: '市区约 230 万人。老城围绕栈桥与中山路，东部香港中路一带刚成形；去黄岛要坐轮渡，没有地铁，公交与自行车是主要出行方式。' },
@@ -131,6 +168,7 @@
       { y: 2008, m: 8, tag: '史实', title: '第 29 届奥运会帆船比赛在青岛举行', desc: '城市基础设施与滨海景观大规模改造。' },
       { y: 2011, m: 6, tag: '史实', title: '胶州湾隧道与跨海大桥通车', desc: '黄岛与主城之间有了全天候通道，西海岸开始大规模开发。' },
       { y: 2016, m: 12, tag: '史实', title: '青岛地铁 3 号线全线通车', desc: '青岛进入轨道交通时代，线路沿老城与李村之间运行。' },
+      { y: 2021, m: 8, tag: '史实', title: '流亭机场转场胶东国际机场', desc: '运行 77 年的流亭机场民航停航，机场片区转为城市用地，城市北部的发展空间打开。' },
       { y: 2021, m: 1, tag: '模拟', title: '进入模拟发展阶段', desc: '此后人口、道路和区域变化按模拟规则推演，不代表真实历史。' },
     ],
     histTasks: [
@@ -186,37 +224,42 @@
       goals: [{ id: 'qd-g2', from: 2006, type: 'connect', months: 36, reward: 110000, title: '奥帆赛前的覆盖', desc: '奥帆赛期间，五四广场与奥帆中心一带客流集中。用地铁把五四广场与奥帆中心连起来。', anchors: [site('五四广场', 3), site('奥帆中心', 3)] }] },
     { id: 'qd-e3', from: 2011, name: '桥隧与北岸', tag: '史实',
       summary: '史实：2011 年 6 月胶州湾隧道与胶州湾跨海大桥通车，环湾交通格局改变。估算：李沧与城阳方向的居住与产业增长加快，北岸与主城之间的通勤成为新的主要走廊，港口与铁路货运继续外迁。',
-      grow: { pop: { licang: 1.35, laoshanq: 1.3, fushanhou: 1.2, shibei: 1.05, shinan: 1.05 }, jobs: { licang: 1.4, laoshanq: 1.35, shinan: 1.2 } },
+      grow: { pop: { licang: 1.35, laoshanq: 1.3, fushanhou: 1.2, chengyang: 1.35, huangdao: 1.3, xihai: 1.5, shibei: 1.05, shinan: 1.05 }, jobs: { licang: 1.4, laoshanq: 1.35, shinan: 1.2, huangdao: 1.3, gaoxin: 1.3 } },
       demand: { decayHW: 1.1 },
-      corridors: [{ a: 'licang', b: 'shibei', f: 1.2 }, { a: 'laoshanq', b: 'shinan', f: 1.15 }, { a: 'fushanhou', b: 'shinan', f: 1.1 }],
-      goals: [{ id: 'qd-g3', from: 2011, type: 'connect', months: 60, reward: 120000, title: '北站与李村', desc: '青岛北站与李村商圈之间通勤量很大。用地铁把青岛北站与李村连起来。', anchors: [site('青岛北站', 4), site('李村商圈', 3)] }] },
+      corridors: [{ a: 'licang', b: 'shibei', f: 1.2 }, { a: 'laoshanq', b: 'shinan', f: 1.15 }, { a: 'fushanhou', b: 'shinan', f: 1.1 }, { a: 'huangdao', b: 'shibei', f: 1.25 }],
+      goals: [{ id: 'qd-g3', from: 2011, type: 'connect', months: 60, reward: 120000, title: '北站与李村', desc: '青岛北站与李村商圈之间通勤量很大。用地铁把青岛北站与李村连起来。', anchors: [site('青岛北站', 4), site('李村商圈', 3)] },
+        { id: 'qd-g3b', from: 2012, type: 'connect', months: 72, reward: 150000, title: '跨过胶州湾', desc: '隧道与大桥通车后，前湾港与西海岸的住户要过湾上班。用地铁把前湾港与老城连起来。', anchors: [site('青岛港前湾港区', 5), site('栈桥', 3)] }] },
     { id: 'qd-e4', from: 2016, name: '轨道交通起步期', tag: '史实',
       summary: '史实：2016 年 12 月青岛地铁 3 号线全线通车（真实线路不会自动出现）。估算：崂山与李沧的居住区继续扩张，香港中路与崂山高科技园的就业增长，夏季旅游与海滨休闲出行保持高位。',
-      grow: { pop: { licang: 1.3, laoshanq: 1.3, fushanhou: 1.2, oldtown: 0.9, shinan: 1.05 }, jobs: { shinan: 1.25, laoshanq: 1.3, licang: 1.3, shibei: 1.05 } },
+      grow: { pop: { licang: 1.3, laoshanq: 1.3, fushanhou: 1.2, chengyang: 1.3, xihai: 1.45, huangdao: 1.25, oldtown: 0.9, shinan: 1.05 }, jobs: { shinan: 1.25, laoshanq: 1.3, licang: 1.3, xihai: 1.5, huangdao: 1.25, shibei: 1.05 } },
       demand: { hw: 1.02, decayHW: 1.1, lz: 1.1, hub: 1.1 },
-      corridors: [{ a: 'licang', b: 'shibei', f: 1.2 }, { a: 'laoshanq', b: 'shinan', f: 1.2 }, { a: 'fushanhou', b: 'shinan', f: 1.1 }],
+      corridors: [{ a: 'licang', b: 'shibei', f: 1.2 }, { a: 'laoshanq', b: 'shinan', f: 1.2 }, { a: 'xihai', b: 'shinan', f: 1.25 }, { a: 'chengyang', b: 'licang', f: 1.15 }],
       goals: [{ id: 'qd-g4', from: 2016, type: 'connect', months: 60, reward: 140000, title: '老城到崂山', desc: '东部沿海一线的居住与就业连成一片。用地铁把栈桥一带的老城与崂山的石老人连起来。', anchors: [site('栈桥', 3), site('石老人', 4)] }] },
     { id: 'qd-e5', from: 2021, name: '模拟未来', tag: '模拟',
       summary: '模拟：此后的发展按模型推演，不代表真实历史。估算：崂山与李沧继续成长，老城以旅游与商业为主，环湾通勤与夏季客流保持高位。',
-      grow: { pop: { laoshanq: 1.25, licang: 1.2, fushanhou: 1.15, oldtown: 0.92 }, jobs: { laoshanq: 1.25, shinan: 1.15, licang: 1.15 } },
-      demand: { lz: 1.1, decayHW: 1.1 }, corridors: [{ a: 'laoshanq', b: 'shinan', f: 1.1 }] },
+      grow: { pop: { laoshanq: 1.25, licang: 1.2, fushanhou: 1.15, chengyang: 1.2, xihai: 1.35, huangdao: 1.2, oldtown: 0.92 }, jobs: { laoshanq: 1.25, shinan: 1.15, licang: 1.15, xihai: 1.35, gaoxin: 1.2 } },
+      demand: { lz: 1.1, decayHW: 1.1 }, corridors: [{ a: 'laoshanq', b: 'shinan', f: 1.1 }, { a: 'xihai', b: 'shinan', f: 1.1 }] },
   ];
 
   const INF = [[2000, 0.004], [2004, 0.039], [2008, 0.059], [2012, 0.026], [2016, 0.02], [2020, 0.025], [2030, 0.02], [2050, 0.02]];
   (CM.MAP_LIST = CM.MAP_LIST || []).push({
     id: 'qd', name: '青岛', title: '青岛 · 2000', sub: '真实地理 · 2000 年起 · 人民币',
-    desc: '从 2000 年的青岛开始：栈桥与中山路还是城市的门面，东部写字楼刚刚成形，去黄岛要坐轮渡。没有地铁，你要在老城、台东、李村与香港中路之间画出第一张轨道网。',
-    facts: [['范围', '26 km × 20 km'], ['起始', '2000 年'], ['人口', '约 230 万'], ['货币', '人民币（CNY）'], ['模式', '经营挑战 / 自由建造']],
-    modes: ['challenge', 'free'], kind: 'real', mapVersion: 1, scenario: 'qd-2000',
+    desc: '从 2000 年的青岛开始：栈桥与中山路还是城市的门面，东部写字楼刚刚成形，北边的城阳还是独立的城区，去黄岛要坐轮渡。没有地铁，你要在胶州湾东岸画出第一张轨道网，再想办法跨过海湾。',
+    facts: [['范围', '32 km × 42 km'], ['起始', '2000 年'], ['人口', '约 360 万'], ['货币', '人民币（CNY）'], ['模式', '经营挑战 / 自由建造']],
+    modes: ['challenge', 'free'], kind: 'real', mapVersion: 2,
+    // v1→v2：地图向北扩到城阳、流亭机场与红岛，向南跨过胶州湾纳入黄岛与西海岸；原有坐标按经纬度重投影，dx/dy 仅用于迁移存档
+    extent: { from: 1, dx: 16, dy: 76, oldW: 104, oldH: 80, newW: 128, newH: 168, note: '地图向北扩大到城阳、流亭机场与红岛高新区，向南跨过胶州湾纳入黄岛、前湾港与西海岸新区',
+      oldRegionIds: ['laoshan', 'oldtown', 'fushanhou', 'shinan', 'shibei', 'licang', 'laoshanq', 'outer'],
+      oldLandmarkIds: ['qd_zhanqiao', 'qd_badaquan', 'qd_xiaoyushan', 'qd_catholic', 'qd_christian', 'qd_station', 'qd_wusi', 'qd_sailing', 'qd_brewery', 'qd_signal', 'qd_qingdaoshan', 'qd_zhanshan', 'qd_ouc', 'qd_qdu', 'qd_shilaoren', 'qd_northstation', 'qd_laoshan'] }, scenario: 'qd-2000',
     region: '中国内地', tagline: '海湾、老城与东部新区', difficulty: 3, tags: ['无地铁开局', '跨海湾', '滨海城市'],
-    intro: '2000 年的青岛还没有地铁。城市沿着胶州湾口摊开：老城挤在栈桥与中山路一带，台东与四方是工人聚居区，东部的香港中路刚刚立起写字楼，李村还是一片老城区。黄岛隔着胶州湾，只能坐轮渡。你要把这些片区连成一张网，再等 2011 年的隧道与跨海大桥。',
-    features: [['wave', '胶州湾与黄海', '海湾把黄岛与主城隔开，滨海与山地限制选线'], ['building', '老城与八大关', '老城街巷与历史街区受保护，不能拆除'], ['bridge', '跨海通道', '2000 年只有轮渡，2011 年隧道与跨海大桥通车'], ['coin', '人民币经营', '造价、票价、拨款与债券按人民币计算']],
-    highlights: [[2008, '奥运会帆船比赛'], [2011, '胶州湾隧道与跨海大桥'], [2016, '地铁 3 号线通车']],
+    intro: '2000 年的青岛还没有地铁。城市沿着胶州湾东岸摊开：老城挤在栈桥与中山路一带，台东与四方是工人聚居区，东部的香港中路刚刚立起写字楼，李村还是老城区，北边的城阳与流亭机场是独立的城镇。黄岛隔着胶州湾，只能坐轮渡。你要把这几个片区连成一张网，再等 2011 年的隧道与跨海大桥，把西海岸接进来。',
+    features: [['wave', '胶州湾与黄海', '海湾把黄岛与主城隔开，滨海与山地限制选线'], ['building', '老城与八大关', '老城街巷与历史街区受保护，不能拆除'], ['bridge', '跨海通道', '2000 年只有轮渡，2011 年隧道与跨海大桥通车'], ['map', '环湾四城', '老城、李村与城阳、红岛高新区、西海岸新区四片城区围绕胶州湾'], ['coin', '人民币经营', '造价、票价、拨款与债券按人民币计算']],
+    highlights: [[2008, '奥运会帆船比赛'], [2011, '胶州湾隧道与跨海大桥'], [2016, '地铁 3 号线通车'], [2021, '流亭机场转场胶东']],
     geo: G, data: data,
     econ: { devOffset: 5, money: 1 },
     cfg: {
-      W: 104, H: 80, START: { y: 2000, m: 1, d: 1, minute: 360 },
-      growth: Object.assign({}, CM.CFG.growth, { popCurve: [[2000, 2.3e6], [2005, 2.45e6], [2010, 2.9e6], [2015, 3.4e6], [2020, 3.9e6], [2030, 4.4e6], [2050, 4.8e6], [2300, 5.0e6]], histEnd: 2020, jobsRatio: [[2000, 0.5], [2010, 0.55], [2020, 0.57], [2040, 0.58]] }),
+      W: 128, H: 168, START: { y: 2000, m: 1, d: 1, minute: 360 },
+      growth: Object.assign({}, CM.CFG.growth, { popCurve: [[2000, 3.6e6], [2005, 3.9e6], [2010, 4.4e6], [2015, 5.1e6], [2020, 5.8e6], [2030, 6.5e6], [2050, 7.2e6], [2300, 7.5e6]], histEnd: 2020, jobsRatio: [[2000, 0.5], [2010, 0.55], [2020, 0.57], [2040, 0.58]] }),
       money: { code: 'CNY', unit: '元', wan: '万元', yi: '亿元', sym: '¥' },
       econBase: 2000,
       cost: Object.assign({}, CM.CFG.cost, {
@@ -249,6 +292,7 @@
         ],
       },
     },
-    cam: { cx: 64, cy: 29, zoom: 18 },
+    cam: { cx: 72, cy: 96, zoom: 15 },
+    // v1→v2：格网由 104×80 扩到 128×168（北到城阳、南到西海岸），存档中的坐标由 extent 迁移，线路与车站随 dx/dy 平移
   });
 })(window.CM);
